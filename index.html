@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>PowderBox — Particle Sandbox</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --bg: #0d0d17;
+        --surface: #161625;
+        --surface2: #1e1e30;
+        --border: #2a2a3e;
+        --text: #e0e0e8;
+        --text2: #999;
+        --accent: #f7c948;
+        --accent-glow: rgba(247,201,72,0.2);
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100dvh;
+        padding: 0.5rem;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        overflow-x: hidden;
+      }
+
+      /* ─── Header ─── */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 972px;
+        padding: 0.4rem 0.25rem;
+        gap: 0.5rem;
+        flex-shrink: 0;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .logo-icon {
+        font-size: 1.5rem;
+        line-height: 1;
+      }
+      h1 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #ff6b35, #f7c948, #4ecdc4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+      h1 small {
+        -webkit-text-fill-color: var(--text2);
+        font-weight: 400;
+        font-size: 0.65rem;
+        margin-left: 0.3rem;
+      }
+      .status {
+        font-size: 0.75rem;
+        color: var(--text2);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .status-badge {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0.15rem 0.45rem;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .recording-badge {
+        color: #ff4444;
+        animation: pulse 0.8s ease-in-out infinite;
+      }
+      @keyframes pulse { 50% { opacity: 0.4; } }
+
+      /* ─── Canvas ─── */
+      .canvas-wrap {
+        width: 100%;
+        max-width: 972px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        overflow: hidden;
+        flex-shrink: 0;
+        position: relative;
+      }
+      .canvas-wrap canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 960 / 600;
+        cursor: crosshair;
+        image-rendering: pixelated;
+        touch-action: none;
+      }
+      .canvas-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: 10px;
+        box-shadow: inset 0 0 60px rgba(0,0,0,0.3);
+      }
+
+      /* ─── Toolbar ─── */
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        align-items: center;
+        width: 100%;
+        max-width: 972px;
+        margin-top: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        background: var(--surface);
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .toolbar-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+      }
+      .tool-btn {
+        width: 38px; height: 38px;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.1s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        background: var(--surface2);
+        flex-shrink: 0;
+      }
+      .tool-btn:active { transform: scale(0.92); }
+      .tool-btn.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 10px var(--accent-glow);
+        background: #2a2a3e;
+      }
+      .tool-shortcut {
+        position: absolute;
+        top: -2px; right: -2px;
+        font-size: 0.5rem;
+        color: var(--text2);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 0 2px;
+        line-height: 1.2;
+        pointer-events: none;
+      }
+
+      .tool-label {
+        display: none;
+      }
+
+      .separator {
+        width: 1px; height: 30px;
+        background: var(--border);
+        flex-shrink: 0;
+        margin: 0 0.2rem;
+      }
+
+      /* Brush control */
+      .brush-group {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-shrink: 0;
+        padding: 0 0.2rem;
+      }
+      .brush-group label {
+        font-size: 0.7rem;
+        color: var(--text2);
+      }
+      .brush-group button {
+        width: 26px; height: 26px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--surface2);
+        color: var(--text);
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .brush-group button:active { background: #333; }
+      .brush-count {
+        min-width: 22px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+
+      /* Action buttons */
+      .actions {
+        display: flex;
+        gap: 0.25rem;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+      .action-btn {
+        padding: 0.3rem 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface2);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.1s;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .action-btn:active { transform: scale(0.95); }
+      .action-btn.record { color: #ff6b6b; }
+      .action-btn.record.active { background: #4a2020; border-color: #ff6b6b; }
+      .action-btn.clear { color: #e88; }
+
+      /* ─── Legend / Shortcuts ─── */
+      .legend {
+        width: 100%;
+        max-width: 972px;
+        margin-top: 0.4rem;
+        font-size: 0.65rem;
+        color: var(--text2);
+        text-align: center;
+        line-height: 1.5;
+        flex-shrink: 0;
+      }
+      .legend kbd {
+        display: inline-block;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 0 4px;
+        font-family: inherit;
+        font-size: 0.6rem;
+        color: var(--text);
+      }
+
+      /* ─── Mobile tweaks ─── */
+      @media (max-width: 600px) {
+        body { padding: 0.25rem; gap: 0; }
+        header { padding: 0.25rem 0; }
+        h1 { font-size: 1rem; }
+        h1 small { display: none; }
+        .status { font-size: 0.65rem; }
+        .toolbar { padding: 0.3rem; gap: 0.2rem; }
+        .tool-btn { width: 34px; height: 34px; font-size: 1rem; }
+        .tool-shortcut { display: none; }
+        .actions .action-btn { font-size: 0.65rem; padding: 0.25rem 0.4rem; }
+        .brush-group label { display: none; }
+        .separator { height: 24px; }
+        .legend { font-size: 0.55rem; }
+      }
+      @media (max-width: 420px) {
+        .tool-btn { width: 30px; height: 30px; font-size: 0.85rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ═══ Header ═══ -->
+    <header>
+      <div class="logo">
+        <span class="logo-icon">🧪</span>
+        <h1>PowderBox <small>particle sandbox</small></h1>
+      </div>
+      <div class="status">
+        <span class="status-badge brush-info" id="status-brush">Brush: <span id="status-size">3</span></span>
+        <span class="status-badge" id="status-tool">Sand</span>
+      </div>
+    </header>
+
+    <!-- ═══ Canvas ═══ -->
+    <div class="canvas-wrap">
+      <canvas id="sim-canvas"></canvas>
+      <div class="canvas-overlay"></div>
+    </div>
+
+    <!-- ═══ Toolbar ═══ -->
+    <div class="toolbar">
+      <div class="toolbar-row" id="tool-row">
+        <button class="tool-btn" id="tool-sand" title="Sand (1)">🟤<span class="tool-shortcut">1</span></button>
+        <button class="tool-btn" id="tool-water" title="Water (2)">🔵<span class="tool-shortcut">2</span></button>
+        <button class="tool-btn" id="tool-fire" title="Fire (3)">🔥<span class="tool-shortcut">3</span></button>
+        <button class="tool-btn" id="tool-wall" title="Wall (4)">🧱<span class="tool-shortcut">4</span></button>
+        <button class="tool-btn" id="tool-wood" title="Wood (5)">🪵<span class="tool-shortcut">5</span></button>
+        <button class="tool-btn" id="tool-oil" title="Oil (6)">🛢️<span class="tool-shortcut">6</span></button>
+        <button class="tool-btn" id="tool-plant" title="Plant (7)">🌿<span class="tool-shortcut">7</span></button>
+        <button class="tool-btn" id="tool-lava" title="Lava (8)">🌋<span class="tool-shortcut">8</span></button>
+        <button class="tool-btn" id="tool-acid" title="Acid (9)">🧪<span class="tool-shortcut">9</span></button>
+        <button class="tool-btn" id="tool-eraser" title="Eraser (0)">🧹<span class="tool-shortcut">0</span></button>
+
+        <div class="separator"></div>
+
+        <div class="brush-group">
+          <label>Brush</label>
+          <button id="brush-decrease" title="Decrease brush (—)">−</button>
+          <span class="brush-count" id="brush-size-display">3</span>
+          <button id="brush-increase" title="Increase brush (=)">+</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="action-btn record" id="btn-record" title="Record GIF (G)">🎬 GIF</button>
+        <button class="action-btn clear" id="btn-clear" title="Clear all (C)">✕ Clear</button>
+      </div>
+    </div>
+
+    <!-- ═══ Legend ═══ -->
+    <p class="legend">
+      <kbd>1</kbd>–<kbd>9</kbd> tools 
+      <kbd>0</kbd> eraser 
+      <kbd>−</kbd>/<kbd>=</kbd> brush 
+      <kbd>G</kbd> record GIF 
+      <kbd>C</kbd> clear 
+      <kbd>Space</kbd> pause 
+      Drag to draw
+    </p>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
