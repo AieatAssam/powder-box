@@ -548,54 +548,46 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
     }
     case 'explode': {
       const { x: ex, y: ey, radius: er } = msg;
-      // Blast centre crater: clear a circle of radius/2
-      const craterR = Math.max(2, er * 0.4);
-      for (let y = Math.max(0, Math.floor(ey - craterR)); y <= Math.min(H - 1, Math.ceil(ey + craterR)); y++) {
-        for (let x = Math.max(0, Math.floor(ex - craterR)); x <= Math.min(W - 1, Math.ceil(ex + craterR)); x++) {
+      const rad2 = er * er;
+      // Iterate outward from centre: clear crater, blast particles
+      for (let y = Math.max(0, Math.floor(ey - er)); y <= Math.min(H - 1, Math.ceil(ey + er)); y++) {
+        for (let x = Math.max(0, Math.floor(ex - er)); x <= Math.min(W - 1, Math.ceil(ex + er)); x++) {
           const dx = x - ex, dy = y - ey;
-          if (dx * dx + dy * dy <= craterR * craterR) {
-            grid[y * W + x] = Element.EMPTY;
-            life[y * W + x] = 0;
-          }
-        }
-      }
-      // Blast wave: push particles outward with violence
-      const x1 = Math.max(0, Math.floor(ex - er));
-      const x2 = Math.min(W - 1, Math.floor(ex + er));
-      const y1 = Math.max(0, Math.floor(ey - er));
-      const y2 = Math.min(H - 1, Math.floor(ey + er));
-      for (let y = y1; y <= y2; y++) {
-        for (let x = x1; x <= x2; x++) {
-          const dx = x - ex, dy = y - ey;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > er || dist < craterR * 0.5) continue;
-          const idx_ = y * W + x;
-          const elem = grid[idx_];
+          const dist2 = dx * dx + dy * dy;
+          if (dist2 > rad2) continue;
+          const dist = Math.sqrt(dist2);
+          const cellIdx = y * W + x;
+          const elem = grid[cellIdx];
           if (elem === Element.EMPTY) continue;
-          // Distance-based push: closer = thrown further
-          const force = 1 + (er - dist) / er * 2;
-          const pushStrength = Math.max(2, Math.round(force * 3));
-          const normX = dx / Math.max(1, dist);
-          const normY = dy / Math.max(1, dist);
-          const nx = Math.round(x + normX * pushStrength + (Math.random() - 0.5) * 2);
-          const ny = Math.round(y + normY * pushStrength + (Math.random() - 0.5) * 2);
-          if (inBounds(nx, ny)) {
-            const ni = ny * W + nx;
-            // Swap with target or just move into empty
-            if (grid[ni] === Element.EMPTY || (grid[ni] !== Element.WALL && Math.random() < 0.3)) {
-              const old = grid[ni];
-              grid[ni] = grid[idx_];
-              life[ni] = life[idx_];
-              grid[idx_] = old === Element.EMPTY ? Element.EMPTY : old;
-              life[idx_] = 0;
+          // Crater zone: clear everything
+          if (dist < er * 0.5) {
+            grid[cellIdx] = Element.EMPTY;
+            life[cellIdx] = 0;
+            // Spark debris in crater
+            if (Math.random() < 0.25) {
+              const sx = x + Math.round((Math.random() - 0.5) * 3);
+              const sy = y + Math.round((Math.random() - 0.5) * 3);
+              if (inBounds(sx, sy) && grid[sy * W + sx] === Element.EMPTY)
+                grid[sy * W + sx] = Element.FIRE, life[sy * W + sx] = 10 + Math.floor(Math.random() * 20);
             }
+            continue;
           }
-          // Fire debris
+          // Blast zone: move particle outward from centre
+          const strength = Math.max(1, Math.round((er - dist) * 0.8));
+          const nx = Math.round(x + (dx / dist) * strength + (Math.random() - 0.5) * 3);
+          const ny = Math.round(y + (dy / dist) * strength + (Math.random() - 0.5) * 3);
+          if (inBounds(nx, ny) && grid[ny * W + nx] === Element.EMPTY) {
+            grid[ny * W + nx] = grid[cellIdx];
+            life[ny * W + nx] = life[cellIdx];
+            grid[cellIdx] = Element.EMPTY;
+            life[cellIdx] = 0;
+          }
+          // Fire trail
           if (Math.random() < 0.2) {
-            const fx = Math.max(0, Math.min(W - 1, x + Math.round((Math.random() - 0.5) * 5)));
-            const fy = Math.max(0, Math.min(H - 1, y + Math.round((Math.random() - 0.5) * 5)));
+            const fx = Math.max(0, Math.min(W - 1, x + Math.round((Math.random() - 0.5) * 4)));
+            const fy = Math.max(0, Math.min(H - 1, y + Math.round((Math.random() - 0.5) * 4)));
             if (grid[fy * W + fx] === Element.EMPTY)
-              grid[fy * W + fx] = Element.FIRE, life[fy * W + fx] = 15 + Math.floor(Math.random() * 25);
+              grid[fy * W + fx] = Element.FIRE, life[fy * W + fx] = 10 + Math.floor(Math.random() * 25);
           }
         }
       }
