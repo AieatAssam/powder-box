@@ -614,6 +614,7 @@ worker.onmessage = (e: MessageEvent<FrameMessage | StateSnapshotMessage>) => {
   }
 
   ctx.putImageData(imgData, 0, 0);
+  queueTick();
 };
 
 // ─── Save / Load ────────────────────────────────────────────────
@@ -704,12 +705,12 @@ function tryRestoreAutosave() {
 }
 
 // ─── Simulation loop ────────────────────────────────────────────
-function loop() {
+// Only send next tick after previous frame is received (avoids message queue buildup)
+function queueTick() {
   worker.postMessage({ type: 'tick' } satisfies WorkerInput);
-  requestAnimationFrame(loop);
 }
 
 // Activate default tool
 selectTool(Tool.SAND);
 updateBrushDisplay();
-loop();
+queueTick();
