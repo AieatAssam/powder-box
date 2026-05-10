@@ -243,6 +243,114 @@
       .action-btn.record { color: #ff6b6b; }
       .action-btn.record.active { background: #4a2020; border-color: #ff6b6b; }
       .action-btn.clear { color: #e88; }
+      .action-btn.generate { 
+        background: linear-gradient(135deg, #2a1a3e, #1e2a3e);
+        border-color: #7c5cbf;
+        color: #c8a8ff;
+        box-shadow: 0 0 6px rgba(124,92,191,0.2);
+        transition: all 0.15s;
+      }
+      .action-btn.generate:hover { 
+        border-color: #a07cff; 
+        background: linear-gradient(135deg, #3a2a4e, #2e3a4e);
+        box-shadow: 0 0 12px rgba(124,92,191,0.4);
+      }
+      .action-btn.generate:active { 
+        transform: scale(0.92);
+      }
+
+      /* ─── Scene name toast ─── */
+      .scene-toast {
+        position: absolute;
+        bottom: 8px; left: 8px;
+        color: rgba(255,255,255,0.85);
+        font-size: 0.68rem;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        pointer-events: none;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+        opacity: 0;
+        transition: opacity 0.6s ease;
+        z-index: 5;
+        background: rgba(0,0,0,0.3);
+        padding: 3px 8px;
+        border-radius: 4px;
+        backdrop-filter: blur(2px);
+      }
+      .scene-toast.visible { opacity: 1; }
+
+      /* ─── Scene transition animation ─── */
+      @keyframes sceneFlash {
+        0% { opacity: 1; }
+        20% { opacity: 0.2; filter: brightness(2); }
+        40% { opacity: 0.4; }
+        100% { opacity: 1; filter: brightness(1); }
+      }
+      .canvas-wrap.scene-transition {
+        animation: sceneFlash 0.35s ease-out;
+      }
+
+      /* ─── Confirmation modal ─── */
+      .confirm-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+      }
+      .confirm-overlay.visible {
+        opacity: 1;
+        pointer-events: all;
+      }
+      .confirm-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        max-width: 360px;
+        text-align: center;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      }
+      .confirm-box h3 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: var(--accent);
+      }
+      .confirm-box p {
+        font-size: 0.8rem;
+        color: var(--text2);
+        margin-bottom: 1rem;
+        line-height: 1.4;
+      }
+      .confirm-btns {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+      }
+      .confirm-btns button {
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.1s;
+      }
+      .confirm-btns .confirm-yes {
+        background: linear-gradient(135deg, #7c5cbf, #5c3c9f);
+        color: white;
+        border-color: #7c5cbf;
+      }
+      .confirm-btns .confirm-yes:hover { background: linear-gradient(135deg, #8c6ccf, #6c4caf); }
+      .confirm-btns .confirm-no {
+        background: var(--surface2);
+        color: var(--text);
+      }
+      .confirm-btns .confirm-no:hover { background: #333; }
 
       /* ─── Legend / Shortcuts ─── */
       .legend {
@@ -303,6 +411,7 @@
     <div class="canvas-wrap">
       <canvas id="sim-canvas"></canvas>
       <div class="canvas-overlay"></div>
+      <div class="scene-toast" id="scene-name"></div>
     </div>
 
     <!-- ═══ Toolbar ═══ -->
@@ -330,6 +439,7 @@
       </div>
 
       <div class="actions">
+        <button class="action-btn generate" id="btn-generate" title="Generate random scene (N)">🎲 Scene</button>
         <button class="action-btn record" id="btn-record" title="Record GIF (G)">🎬 GIF</button>
         <button class="action-btn clear" id="btn-clear" title="Clear all (C)">✕ Clear</button>
       </div>
@@ -340,11 +450,24 @@
       <kbd>1</kbd>–<kbd>9</kbd> tools 
       <kbd>0</kbd> eraser 
       <kbd>−</kbd>/<kbd>=</kbd> brush 
+      <kbd>N</kbd> new scene <kbd>←</kbd><kbd>→</kbd> cycle 
       <kbd>G</kbd> record GIF 
       <kbd>C</kbd> clear 
       <kbd>Space</kbd> pause 
       Drag to draw
     </p>
+
+    <!-- ═══ Confirmation modal ═══ -->
+    <div class="confirm-overlay" id="confirm-overlay">
+      <div class="confirm-box">
+        <h3>🧹 Generate new scene?</h3>
+        <p>You've made changes to the canvas. Generating a new scene will replace everything. Undo is not supported.</p>
+        <div class="confirm-btns">
+          <button class="confirm-yes" id="confirm-yes">🎲 Generate</button>
+          <button class="confirm-no" id="confirm-no">Cancel</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

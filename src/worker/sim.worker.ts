@@ -45,9 +45,9 @@ function init(w: number, h: number) {
   pixels = new Uint8ClampedArray(W * H * 4);
   // Fill canvas with empty pixel colour (black with alpha = 255)
   for (let i = 0; i < pixels.length; i += 4) {
-    pixels[i] = 20;       // R
-    pixels[i + 1] = 15;   // G
-    pixels[i + 2] = 25;   // B — very dark purple-black
+    pixels[i] = 16;       // R
+    pixels[i + 1] = 18;    // G
+    pixels[i + 2] = 28;    // B — gradient midpoint
     pixels[i + 3] = 255;  // A
   }
 }
@@ -418,14 +418,18 @@ function toolToElement(tool: Tool): Element | null {
 // ─── Pixel rendering ────────────────────────────────────────────
 function renderPixels() {
   for (let y = 0; y < H; y++) {
+    // Subtle gradient: deep purple-black at top → dark teal at bottom
+    const t = y / (H - 1);
+    const bgR = 20 - t * 8;
+    const bgG = 15 + t * 10;
+    const bgB = 25 + t * 8;
     for (let x = 0; x < W; x++) {
       const pi = (y * W + x) * 4;
       const elem = grid[y * W + x];
       if (elem === Element.EMPTY) {
-        // Dark background
-        pixels[pi] = 20;
-        pixels[pi + 1] = 15;
-        pixels[pi + 2] = 25;
+        pixels[pi] = bgR;
+        pixels[pi + 1] = bgG;
+        pixels[pi + 2] = bgB;
         pixels[pi + 3] = 255;
       } else {
         const [r, g, b] = pickColor(elem, x, y);
@@ -460,13 +464,30 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
       // Re-allocate new buffer for next frame
       pixels = new Uint8ClampedArray(W * H * 4);
       for (let i = 0; i < pixels.length; i += 4) {
-        pixels[i] = 20; pixels[i + 1] = 15;
-        pixels[i + 2] = 25; pixels[i + 3] = 255;
+        pixels[i] = 16; pixels[i + 1] = 18;
+        pixels[i + 2] = 28; pixels[i + 3] = 255;
       }
       break;
     case 'clear':
       grid.fill(0);
       life.fill(0);
       break;
+    case 'placeCells': {
+      const view = new DataView(msg.data);
+      const count = msg.data.byteLength / 6;
+      for (let i = 0; i < count; i++) {
+        const off = i * 6;
+        const x = view.getUint16(off, true);
+        const y = view.getUint16(off + 2, true);
+        const elem = view.getUint8(off + 4);
+        const lifetime = view.getUint8(off + 5);
+        if (inBounds(x, y)) {
+          const gi = y * W + x;
+          grid[gi] = elem;
+          life[gi] = lifetime;
+        }
+      }
+      break;
+    }
   }
 };

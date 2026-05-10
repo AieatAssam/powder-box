@@ -157,11 +157,18 @@ export interface ClearMessage {
   type: 'clear';
 }
 
+export interface PlaceCellsMessage {
+  type: 'placeCells';
+  /** Packed buffer: [x(16bit), y(16bit), elem(8bit), life(8bit)] × N (little-endian) */
+  data: ArrayBuffer;
+}
+
 export type WorkerInput =
   | InitMessage
   | InputMessage
   | TickMessage
-  | ClearMessage;
+  | ClearMessage
+  | PlaceCellsMessage;
 
 export interface FrameMessage {
   type: 'frame';
