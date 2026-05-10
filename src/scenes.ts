@@ -389,49 +389,89 @@ const lavaDelta: SceneBuilder = (seed) => {
 };
 
 // ─── Scene: Geometric Mandala ───────────────────────────────────
+// A stable, compartmented design: wall rings trap sand/water/lava in sections
+// so physics enhances rather than destroys the pattern.
 const mandala: SceneBuilder = (seed) => {
   const rng = mulberry32(seed);
   const out = makeSink();
-  const cx = GRID_W / 2 + (rng() - 0.5) * 20;
-  const cy = GRID_H / 2 + (rng() - 0.5) * 15;
-  const elements = [Element.SAND, Element.WATER, Element.WALL, Element.WOOD, Element.PLANT, Element.LAVA];
+  const cx = GRID_W / 2 + (rng() - 0.5) * 15;
+  const cy = GRID_H * 0.42 + (rng() - 0.5) * 10;
+  const maxR = 98;
 
-  for (let ring = 1; ring <= 12; ring++) {
-    const r = ring * 8 + rng() * 2;
-    const elem = elements[ring % elements.length];
-    const thickness = 2 + Math.sin(ring * 2) * 1;
+  // ── Outer ring (thick wall border) ──
+  strokeCircle(out, cx, cy, maxR, Element.WALL);
+  strokeCircle(out, cx, cy, maxR + 1, Element.WALL);
+  strokeCircle(out, cx, cy, maxR - 1, Element.WALL);
 
-    for (let a = 0; a < 360; a += 360 / (ring * 4 + 4)) {
-      const rad = a * Math.PI / 180;
-      const x = cx + r * Math.cos(rad);
-      const y = cy + r * Math.sin(rad) * 0.8;
-      if (x >= 0 && x < GRID_W && y >= 0 && y < GRID_H) {
-        fillCircle(out, x, y, thickness, elem);
-      }
-    }
+  // ── Structured concentric rings ──
+  // Each segment alternates: wall border → filled compartment
+  const ringRadii = [85, 75, 62, 50, 38, 25, 14];
+  const ringElems = [Element.WALL, Element.GLASS, Element.WALL, Element.GLASS, Element.WALL, Element.GLASS, Element.WALL];
 
-    // Radial spokes
-    if (ring % 3 === 0) {
-      for (let a = 0; a < 360; a += 30 + ring * 2) {
-        const rad = a * Math.PI / 180;
-        const x2 = cx + (r + 5) * Math.cos(rad);
-        const y2 = cy + (r + 5) * Math.sin(rad) * 0.8;
-        const x1 = cx + (r - 5) * Math.cos(rad);
-        const y1 = cy + (r - 5) * Math.sin(rad) * 0.8;
-        line(out, Math.floor(x1), Math.floor(y1), Math.floor(x2), Math.floor(y2), Element.WALL);
+  for (let ri = 0; ri < ringRadii.length; ri++) {
+    const r = ringRadii[ri];
+    const isWall = ri % 2 === 0;
+    const elem = ringElems[ri];
+    if (isWall) {
+      // Thicker wall ring to act as compartment border
+      strokeCircle(out, cx, cy, r, Element.WALL);
+      strokeCircle(out, cx, cy, r + 1, Element.WALL);
+      strokeCircle(out, cx, cy, r - 1, Element.WALL);
+    } else {
+      // Glass ring (decorative translucent ring)
+      strokeCircle(out, cx, cy, r, Element.GLASS);
+      // Fill the compartment between this ring and the next wall ring
+      const outerWallR = ringRadii[ri - 1];
+      const innerWallR = ringRadii[ri + 1];
+      if (outerWallR && innerWallR) {
+        const midR = (outerWallR + innerWallR) / 2;
+        // Wedge fills in alternating quadrants
+        const fillElem = [Element.SAND, Element.WATER, Element.SAND, Element.FIRE];
+        const petalCount = 8;
+        for (let p = 0; p < petalCount; p++) {
+          const startAngle = (p / petalCount) * Math.PI * 2 + rng() * 0.05;
+          const endAngle = ((p + 0.4) / petalCount) * Math.PI * 2;
+          const wedgeElem = fillElem[p % fillElem.length];
+          const life = wedgeElem === Element.FIRE ? 40 : 0;
+          for (let a = startAngle; a < endAngle; a += 0.04) {
+            for (let rr = innerWallR + 1; rr < outerWallR - 1; rr++) {
+              const px = Math.round(cx + rr * Math.cos(a));
+              const py = Math.round(cy + rr * Math.sin(a) * 0.85);
+              if (px >= 0 && px < GRID_W && py >= 0 && py < GRID_H)
+                out.push(px, py, wedgeElem, life);
+            }
+          }
+        }
       }
     }
   }
 
-  // Center glow (lava/fire in center)
-  fillCircle(out, cx, cy, 5 + rng() * 3, Element.LAVA, 180);
-  fillCircle(out, cx, cy, 3, Element.FIRE, 45);
+  // ── Radial spokes connecting rings ──
+  const spokeCount = 12;
+  for (let s = 0; s < spokeCount; s++) {
+    const a = (s / spokeCount) * Math.PI * 2;
+    const x1 = Math.round(cx + 10 * Math.cos(a));
+    const y1 = Math.round(cy + 10 * Math.sin(a) * 0.85);
+    const x2 = Math.round(cx + maxR * Math.cos(a));
+    const y2 = Math.round(cy + maxR * Math.sin(a) * 0.85);
+    line(out, x1, y1, x2, y2, Element.WALL);
+  }
 
-  // Outer border
-  strokeCircle(out, cx, cy, 100, Element.WALL);
+  // ── Center piece: lava core inside glass ──
+  fillCircle(out, cx, cy, 6, Element.GLASS);
+  fillCircle(out, cx, cy, 3, Element.LAVA, 180);
 
-  // Fill background with sand
-  fillCircle(out, cx, cy, 110, Element.SAND);
+  // ── Accents: small wall dots on outer ring for visual rhythm ──
+  let dotIdx = 0;
+  for (let a = 0; a < 360; a += 15) {
+    const rad = a * Math.PI / 180;
+    const dx = (maxR + 1) * Math.cos(rad);
+    const dy = (maxR + 1) * Math.sin(rad) * 0.85;
+    const px = Math.round(cx + dx);
+    const py = Math.round(cy + dy);
+    if (px >= 0 && px < GRID_W && py >= 0 && py < GRID_H)
+      out.push(px, py, dotIdx++ % 3 === 0 ? Element.WALL : Element.GLASS);
+  }
 
   return out.cells;
 };
