@@ -211,11 +211,24 @@ function tickLiquid(x: number, y: number, spreadRate: number) {
   }
 
   // Spread sideways (consistent direction per cell to avoid flickering)
+  const liquidSelf = get(x, y);
   const liquidDir = ((x + y) & 1) ? 1 : -1;
   for (let attempt = 0; attempt < spreadRate; attempt++) {
     const dir = (attempt & 1) ? -liquidDir : liquidDir;
     const tx = x + dir;
-    if (inBounds(tx, y) && get(tx, y) === Element.EMPTY) {
+    if (!inBounds(tx, y)) continue;
+    const target = get(tx, y);
+    if (target === Element.EMPTY) {
+      swap(x, y, tx, y);
+      return;
+    }
+    // Density displacement: water pushes oil sideways to find its level
+    if (liquidSelf === Element.WATER && target === Element.OIL) {
+      swap(x, y, tx, y);
+      return;
+    }
+    // Oil pushes acid sideways
+    if (liquidSelf === Element.OIL && target === Element.ACID) {
       swap(x, y, tx, y);
       return;
     }
