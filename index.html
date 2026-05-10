@@ -16,6 +16,7 @@
         --accent: #f7c948;
         --accent-glow: rgba(247,201,72,0.2);
       }
+      html, body { height: 100%; overflow: hidden; }
       body {
         background: var(--bg);
         color: var(--text);
@@ -23,12 +24,22 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        min-height: 100dvh;
-        padding: 0.5rem;
+        padding: 0.4rem;
+        gap: 0.3rem;
         user-select: none;
         -webkit-user-select: none;
         -webkit-tap-highlight-color: transparent;
-        overflow-x: hidden;
+      }
+
+      /* ─── Main layout ─── */
+      .layout {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 972px;
+        flex: 1;
+        min-height: 0;
+        gap: 0.3rem;
       }
 
       /* ─── Header ─── */
@@ -36,9 +47,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        width: 100%;
-        max-width: 972px;
-        padding: 0.4rem 0.25rem;
+        padding: 0 0.15rem;
         gap: 0.5rem;
         flex-shrink: 0;
       }
@@ -92,23 +101,25 @@
 
       /* ─── Canvas ─── */
       .canvas-wrap {
-        width: 100%;
-        max-width: 972px;
+        flex: 1;
+        min-height: 0;
         border-radius: 10px;
         border: 1px solid var(--border);
         background: var(--surface);
         overflow: hidden;
-        flex-shrink: 0;
         position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .canvas-wrap canvas {
         display: block;
-        width: 100%;
-        height: auto;
-        aspect-ratio: 960 / 600;
+        max-width: 100%;
+        max-height: 100%;
         cursor: crosshair;
         image-rendering: pixelated;
         touch-action: none;
+        aspect-ratio: 960 / 600;
       }
       .canvas-overlay {
         position: absolute;
@@ -121,17 +132,14 @@
       /* ─── Toolbar ─── */
       .toolbar {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-        align-items: center;
-        width: 100%;
-        max-width: 972px;
-        margin-top: 0.5rem;
-        padding: 0.4rem 0.5rem;
-        background: var(--surface);
-        border-radius: 10px;
-        border: 1px solid var(--border);
+        flex-direction: column;
+        gap: 0;
         flex-shrink: 0;
+        width: 100%;
+        padding: 0.3rem 0.4rem;
+        background: var(--surface);
+        border-radius: 8px;
+        border: 1px solid var(--border);
       }
       .toolbar-row {
         display: flex;
@@ -251,12 +259,20 @@
       }
 
       /* Action buttons */
-      .actions-row {
+      .actions-bar {
         display: flex;
-        gap: 0.25rem;
-        justify-content: flex-end;
+        gap: 0.2rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        padding-top: 0.2rem;
+        border-top: 1px solid var(--border);
       }
-      .actions-row:first-child { margin-bottom: 0.2rem; }
+      .actions-sep {
+        width: 1px;
+        background: var(--border);
+        align-self: stretch;
+        margin: 0 0.15rem;
+      }
       .action-btn {
         padding: 0.3rem 0.6rem;
         border: 1px solid var(--border);
@@ -386,13 +402,10 @@
 
       /* ─── Legend / Shortcuts ─── */
       .legend {
-        width: 100%;
-        max-width: 972px;
-        margin-top: 0.4rem;
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         color: var(--text2);
         text-align: center;
-        line-height: 1.5;
+        line-height: 1.4;
         flex-shrink: 0;
       }
       .legend kbd {
@@ -407,95 +420,100 @@
       }
 
       /* ─── Mobile tweaks ─── */
-      @media (max-width: 600px) {
-        body { padding: 0.25rem; gap: 0; }
-        header { padding: 0.25rem 0; }
-        h1 { font-size: 1rem; }
+      @media (max-width: 700px) {
+        body { padding: 0.2rem; gap: 0.15rem; }
+        .layout { gap: 0.15rem; }
+        header { padding: 0.1rem 0; }
+        h1 { font-size: 0.85rem; }
         h1 small { display: none; }
-        .status { font-size: 0.65rem; }
-        .toolbar { padding: 0.3rem; gap: 0.2rem; flex-wrap: wrap; }
-        .toolbar-row { gap: 0.15rem; }
-        .tool-btn { width: 34px; height: 34px; font-size: 1rem; padding: 0; justify-content: center; min-width: 34px; }
+        .logo-icon { font-size: 1.1rem; }
+        .status { font-size: 0.6rem; gap: 0.2rem; }
+        .status-badge { padding: 0.1rem 0.3rem; }
+        .toolbar { padding: 0.2rem; gap: 0.15rem; border-radius: 8px; }
+        .toolbar-row { gap: 0.12rem; }
+        .tool-btn { width: 30px; height: 30px; font-size: 0.85rem; padding: 0; justify-content: center; min-width: 30px; }
+        .swatch { width: 18px; height: 18px; font-size: 0.65rem; }
         .tool-label { display: none; }
         .tool-shortcut { display: none; }
-        .actions-row { flex-wrap: wrap; gap: 0.15rem; width: 100%; justify-content: center; }
-        .actions-row .action-btn { font-size: 0.6rem; padding: 0.2rem 0.35rem; }
-        .actions-row:first-child { margin-bottom: 0.15rem; }
+        .actions-bar { gap: 0.15rem; padding-top: 0.15rem; }
+        .actions-bar .action-btn { font-size: 0.55rem; padding: 0.15rem 0.25rem; }
         .brush-group label { display: none; }
-        .brush-group button { width: 22px; height: 22px; }
-        .separator { height: 24px; }
-        .legend { font-size: 0.55rem; }
+        .brush-group button { width: 20px; height: 20px; font-size: 0.7rem; }
+        .brush-count { font-size: 0.7rem; min-width: 16px; }
+        .separator { display: none; }
+        .actions-sep { display: none; }
+        .legend { font-size: 0.5rem; }
       }
       @media (max-width: 420px) {
-        .tool-btn { width: 30px; height: 30px; font-size: 0.85rem; padding: 0; }
-        .tool-label { display: none; }
+        body { padding: 0.15rem; gap: 0.1rem; }
+        .tool-btn { width: 26px; height: 26px; font-size: 0.75rem; min-width: 26px; }
+        .swatch { width: 15px; height: 15px; font-size: 0.55rem; }
+        h1 { font-size: 0.75rem; }
       }
     </style>
   </head>
   <body>
-    <!-- ═══ Header ═══ -->
-    <header>
-      <div class="logo">
-        <span class="logo-icon">🧪</span>
-        <h1>PowderBox <small>particle sandbox</small></h1>
+    <div class="layout">
+
+      <!-- ═══ Header ═══ -->
+      <header>
+        <div class="logo">
+          <span class="logo-icon">🧪</span>
+          <h1>PowderBox <small>particle sandbox</small></h1>
+        </div>
+        <div class="status">
+          <span class="status-badge brush-info" id="status-brush">Brush: <span id="status-size">3</span></span>
+          <span class="status-badge" id="status-tool">Sand</span>
+        </div>
+      </header>
+
+      <!-- ═══ Canvas ═══ -->
+      <div class="canvas-wrap">
+        <canvas id="sim-canvas"></canvas>
+        <div class="canvas-overlay"></div>
+        <div class="scene-toast" id="scene-name"></div>
       </div>
-      <div class="status">
-        <span class="status-badge brush-info" id="status-brush">Brush: <span id="status-size">3</span></span>
-        <span class="status-badge" id="status-tool">Sand</span>
-      </div>
-    </header>
 
-    <!-- ═══ Canvas ═══ -->
-    <div class="canvas-wrap">
-      <canvas id="sim-canvas"></canvas>
-      <div class="canvas-overlay"></div>
-      <div class="scene-toast" id="scene-name"></div>
-    </div>
+      <!-- ═══ Toolbar ═══ -->
+      <div class="toolbar">
+        <div class="toolbar-row" id="tool-row">
+          <button class="tool-btn" id="tool-sand"><span class="swatch" style="background:#d4a574">🟤</span><span class="tool-label">Sand</span><span class="tool-shortcut">1</span></button>
+          <button class="tool-btn" id="tool-water"><span class="swatch" style="background:#3498db">💧</span><span class="tool-label">Water</span><span class="tool-shortcut">2</span></button>
+          <button class="tool-btn" id="tool-fire"><span class="swatch" style="background:#ff5722">🔥</span><span class="tool-label">Fire</span><span class="tool-shortcut">3</span></button>
+          <button class="tool-btn" id="tool-wall"><span class="swatch" style="background:#64646e">🧱</span><span class="tool-label">Wall</span><span class="tool-shortcut">4</span></button>
+          <button class="tool-btn" id="tool-wood"><span class="swatch" style="background:#8b4513">🪵</span><span class="tool-label">Wood</span><span class="tool-shortcut">5</span></button>
+          <button class="tool-btn" id="tool-oil"><span class="swatch" style="background:#50461e">🛢️</span><span class="tool-label">Oil</span><span class="tool-shortcut">6</span></button>
+          <button class="tool-btn" id="tool-plant"><span class="swatch" style="background:#2e7d32">🌿</span><span class="tool-label">Plant</span><span class="tool-shortcut">7</span></button>
+          <button class="tool-btn" id="tool-lava"><span class="swatch" style="background:#ff4500">🌋</span><span class="tool-label">Lava</span><span class="tool-shortcut">8</span></button>
+          <button class="tool-btn" id="tool-acid"><span class="swatch" style="background:#00ff00">🧪</span><span class="tool-label">Acid</span><span class="tool-shortcut">9</span></button>
+          <button class="tool-btn" id="tool-explode"><span class="swatch" style="background:#ff4444;box-shadow:inset 0 0 4px #ff8800">💥</span><span class="tool-label">Boom</span><span class="tool-shortcut">E</span></button>
+          <button class="tool-btn" id="tool-eraser"><span class="swatch eraser-swatch">✕</span><span class="tool-label">Erase</span><span class="tool-shortcut">0</span></button>
 
-    <!-- ═══ Toolbar ═══ -->
-    <div class="toolbar">
-      <div class="toolbar-row" id="tool-row">
-        <button class="tool-btn" id="tool-sand"><span class="swatch" style="background:#d4a574">🟤</span><span class="tool-label">Sand</span><span class="tool-shortcut">1</span></button>
-        <button class="tool-btn" id="tool-water"><span class="swatch" style="background:#3498db">💧</span><span class="tool-label">Water</span><span class="tool-shortcut">2</span></button>
-        <button class="tool-btn" id="tool-fire"><span class="swatch" style="background:#ff5722">🔥</span><span class="tool-label">Fire</span><span class="tool-shortcut">3</span></button>
-        <button class="tool-btn" id="tool-wall"><span class="swatch" style="background:#64646e">🧱</span><span class="tool-label">Wall</span><span class="tool-shortcut">4</span></button>
-        <button class="tool-btn" id="tool-wood"><span class="swatch" style="background:#8b4513">🪵</span><span class="tool-label">Wood</span><span class="tool-shortcut">5</span></button>
-        <button class="tool-btn" id="tool-oil"><span class="swatch" style="background:#50461e">🛢️</span><span class="tool-label">Oil</span><span class="tool-shortcut">6</span></button>
-        <button class="tool-btn" id="tool-plant"><span class="swatch" style="background:#2e7d32">🌿</span><span class="tool-label">Plant</span><span class="tool-shortcut">7</span></button>
-        <button class="tool-btn" id="tool-lava"><span class="swatch" style="background:#ff4500">🌋</span><span class="tool-label">Lava</span><span class="tool-shortcut">8</span></button>
-        <button class="tool-btn" id="tool-acid"><span class="swatch" style="background:#00ff00">🧪</span><span class="tool-label">Acid</span><span class="tool-shortcut">9</span></button>
-        <button class="tool-btn" id="tool-explode"><span class="swatch" style="background:#ff4444;box-shadow:inset 0 0 4px #ff8800">💥</span><span class="tool-label">Boom</span><span class="tool-shortcut">E</span></button>
-        <button class="tool-btn" id="tool-eraser"><span class="swatch eraser-swatch">✕</span><span class="tool-label">Erase</span><span class="tool-shortcut">0</span></button>
+          <div class="separator"></div>
 
-        <div class="separator"></div>
+          <div class="brush-group">
+            <label>Brush</label>
+            <button id="brush-decrease">−</button>
+            <span class="brush-count" id="brush-size-display">3</span>
+            <button id="brush-increase">+</button>
+          </div>
+        </div>
 
-        <div class="brush-group">
-          <label>Brush</label>
-          <button id="brush-decrease">−</button>
-          <span class="brush-count" id="brush-size-display">3</span>
-          <button id="brush-increase">+</button>
+        <div class="actions-bar">
+          <button class="action-btn generate" id="btn-generate">🎲 Scene</button>
+          <button class="action-btn" id="btn-wind">🌬️ Off</button>
+          <button class="action-btn" id="btn-gravity">🔄 ↓</button>
+          <span class="actions-sep"></span>
+          <button class="action-btn" id="btn-save">💾 Save</button>
+          <button class="action-btn" id="btn-load">📂 Load</button>
+          <input type="file" id="load-input" accept=".pbox" style="display:none">
+          <button class="action-btn record" id="btn-record">🎬 GIF</button>
+          <button class="action-btn clear" id="btn-clear">✕ Clear</button>
         </div>
       </div>
 
-      <div class="actions-row">
-        <button class="action-btn generate" id="btn-generate">🎲 Scene</button>
-        <button class="action-btn" id="btn-wind">🌬️ Off</button>
-        <button class="action-btn" id="btn-gravity">🔄 ↓</button>
-      </div>
-      <div class="actions-row">
-        <button class="action-btn" id="btn-save">💾 Save</button>
-        <button class="action-btn" id="btn-load">📂 Load</button>
-        <input type="file" id="load-input" accept=".pbox" style="display:none">
-        <button class="action-btn record" id="btn-record">🎬 GIF</button>
-        <button class="action-btn clear" id="btn-clear">✕ Clear</button>
-      </div>
-    </div>
-
-    <!-- ═══ Mode indicator (follows mouse) ═══ -->
-    <div id="mode-indicator" style="position:fixed;pointer-events:none;z-index:50;font-size:0.7rem;color:var(--text2);background:rgba(0,0,0,0.6);border:1px solid var(--border);border-radius:4px;padding:1px 4px;display:none;white-space:nowrap"></div>
-
-    <!-- ═══ Legend ═══ -->
-    <p class="legend">
+      <!-- ═══ Legend ═══ -->
+      <p class="legend">
       <kbd>1</kbd>–<kbd>9</kbd> tools 
       <kbd>0</kbd> eraser 
       <kbd>−</kbd>/<kbd>=</kbd> brush 
@@ -506,6 +524,12 @@
       <kbd>Space</kbd> pause 
       Drag to draw
     </p>
+
+    </div>
+    <!-- ── end layout ── -->
+
+    <!-- ═══ Mode indicator (follows mouse) ═══ -->
+    <div id="mode-indicator" style="position:fixed;pointer-events:none;z-index:50;font-size:0.7rem;color:var(--text2);background:rgba(0,0,0,0.6);border:1px solid var(--border);border-radius:4px;padding:1px 4px;display:none;white-space:nowrap"></div>
 
     <!-- ═══ Confirmation modal ═══ -->
     <div class="confirm-overlay" id="confirm-overlay">
