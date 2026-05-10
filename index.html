@@ -142,7 +142,7 @@
         min-width: 0;
       }
       .tool-btn {
-        width: 38px; height: 38px;
+        height: 38px;
         border: 2px solid transparent;
         border-radius: 8px;
         cursor: pointer;
@@ -150,10 +150,12 @@
         transition: all 0.1s;
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 5px;
         font-size: 1.1rem;
         background: var(--surface2);
         flex-shrink: 0;
+        padding: 0 8px;
+        min-width: 38px;
       }
       .tool-btn:active { transform: scale(0.92); }
       .tool-btn.active {
@@ -177,6 +179,13 @@
         align-items: center;
         justify-content: center;
         box-shadow: none;
+      }
+      .tool-label {
+        font-size: 0.6rem;
+        color: var(--text2);
+        white-space: nowrap;
+        font-weight: 500;
+        letter-spacing: 0.02em;
       }
       .tool-shortcut {
         position: absolute;
@@ -399,7 +408,8 @@
         h1 small { display: none; }
         .status { font-size: 0.65rem; }
         .toolbar { padding: 0.3rem; gap: 0.2rem; }
-        .tool-btn { width: 34px; height: 34px; font-size: 1rem; }
+        .tool-btn { width: 34px; height: 34px; font-size: 1rem; padding: 0; justify-content: center; }
+        .tool-label { display: none; }
         .tool-shortcut { display: none; }
         .actions .action-btn { font-size: 0.65rem; padding: 0.25rem 0.4rem; }
         .brush-group label { display: none; }
@@ -407,7 +417,8 @@
         .legend { font-size: 0.55rem; }
       }
       @media (max-width: 420px) {
-        .tool-btn { width: 30px; height: 30px; font-size: 0.85rem; }
+        .tool-btn { width: 30px; height: 30px; font-size: 0.85rem; padding: 0; }
+        .tool-label { display: none; }
       }
     </style>
   </head>
@@ -434,16 +445,16 @@
     <!-- ═══ Toolbar ═══ -->
     <div class="toolbar">
       <div class="toolbar-row" id="tool-row">
-        <button class="tool-btn" id="tool-sand" title="Sand (1)"><span class="swatch" style="background:#d4a574"></span><span class="tool-shortcut">1</span></button>
-        <button class="tool-btn" id="tool-water" title="Water (2)"><span class="swatch" style="background:#3498db"></span><span class="tool-shortcut">2</span></button>
-        <button class="tool-btn" id="tool-fire" title="Fire (3)"><span class="swatch" style="background:#ff5722"></span><span class="tool-shortcut">3</span></button>
-        <button class="tool-btn" id="tool-wall" title="Wall (4)"><span class="swatch" style="background:#64646e"></span><span class="tool-shortcut">4</span></button>
-        <button class="tool-btn" id="tool-wood" title="Wood (5)"><span class="swatch" style="background:#8b4513"></span><span class="tool-shortcut">5</span></button>
-        <button class="tool-btn" id="tool-oil" title="Oil (6)"><span class="swatch" style="background:#50461e"></span><span class="tool-shortcut">6</span></button>
-        <button class="tool-btn" id="tool-plant" title="Plant (7)"><span class="swatch" style="background:#2e7d32"></span><span class="tool-shortcut">7</span></button>
-        <button class="tool-btn" id="tool-lava" title="Lava (8)"><span class="swatch" style="background:#ff4500"></span><span class="tool-shortcut">8</span></button>
-        <button class="tool-btn" id="tool-acid" title="Acid (9)"><span class="swatch" style="background:#00ff00"></span><span class="tool-shortcut">9</span></button>
-        <button class="tool-btn" id="tool-eraser" title="Eraser (0)"><span class="swatch eraser-swatch">✕</span><span class="tool-shortcut">0</span></button>
+        <button class="tool-btn" id="tool-sand" title="Sand (1)"><span class="swatch" style="background:#d4a574"></span><span class="tool-label">Sand</span><span class="tool-shortcut">1</span></button>
+        <button class="tool-btn" id="tool-water" title="Water (2)"><span class="swatch" style="background:#3498db"></span><span class="tool-label">Water</span><span class="tool-shortcut">2</span></button>
+        <button class="tool-btn" id="tool-fire" title="Fire (3)"><span class="swatch" style="background:#ff5722"></span><span class="tool-label">Fire</span><span class="tool-shortcut">3</span></button>
+        <button class="tool-btn" id="tool-wall" title="Wall (4)"><span class="swatch" style="background:#64646e"></span><span class="tool-label">Wall</span><span class="tool-shortcut">4</span></button>
+        <button class="tool-btn" id="tool-wood" title="Wood (5)"><span class="swatch" style="background:#8b4513"></span><span class="tool-label">Wood</span><span class="tool-shortcut">5</span></button>
+        <button class="tool-btn" id="tool-oil" title="Oil (6)"><span class="swatch" style="background:#50461e"></span><span class="tool-label">Oil</span><span class="tool-shortcut">6</span></button>
+        <button class="tool-btn" id="tool-plant" title="Plant (7)"><span class="swatch" style="background:#2e7d32"></span><span class="tool-label">Plant</span><span class="tool-shortcut">7</span></button>
+        <button class="tool-btn" id="tool-lava" title="Lava (8)"><span class="swatch" style="background:#ff4500"></span><span class="tool-label">Lava</span><span class="tool-shortcut">8</span></button>
+        <button class="tool-btn" id="tool-acid" title="Acid (9)"><span class="swatch" style="background:#00ff00"></span><span class="tool-label">Acid</span><span class="tool-shortcut">9</span></button>
+        <button class="tool-btn" id="tool-eraser" title="Eraser (0)"><span class="swatch eraser-swatch">✕</span><span class="tool-label">Erase</span><span class="tool-shortcut">0</span></button>
 
         <div class="separator"></div>
 
