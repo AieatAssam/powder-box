@@ -171,15 +171,39 @@ function tickLiquid(x: number, y: number, spreadRate: number) {
   if (inBounds(x, y + dy)) {
     const below = get(x, y + dy);
     if (below === Element.EMPTY) { swap(x, y, x, y + dy); return; }
-    // Water/oil floats on lava (lava is denser)
-    if (get(x, y) === Element.WATER && below === Element.LAVA) {
-      // Water + lava = steam
+
+    const elem = get(x, y);
+
+    // Water sinks through oil (density)
+    if (elem === Element.WATER && below === Element.OIL) {
+      swap(x, y, x, y + dy);
+      return;
+    }
+    // Oil floats on water (less dense)
+    if (elem === Element.OIL && below === Element.WATER) {
+      // Oil stays on top — do nothing, let water flow under
+      // Handled below: just skip any interaction
+    }
+    // Water/oil reacts with lava
+    if (elem === Element.WATER && below === Element.LAVA) {
       set(x, y + dy, Element.STEAM, STEAM_LIFETIME);
       set(x, y, Element.EMPTY);
       return;
     }
+    // Oil on lava = fire explosion
+    if (elem === Element.OIL && below === Element.LAVA) {
+      set(x, y + dy, Element.FIRE, FIRE_LIFETIME + 20);
+      set(x, y, Element.EMPTY);
+      return;
+    }
     // Water + acid = neutralised (both consumed, releases steam)
-    if (get(x, y) === Element.WATER && below === Element.ACID) {
+    if (elem === Element.WATER && below === Element.ACID) {
+      set(x, y + dy, Element.STEAM, STEAM_LIFETIME);
+      set(x, y, Element.EMPTY);
+      return;
+    }
+    // Acid on water = neutralised too
+    if (elem === Element.ACID && below === Element.WATER) {
       set(x, y + dy, Element.STEAM, STEAM_LIFETIME);
       set(x, y, Element.EMPTY);
       return;
