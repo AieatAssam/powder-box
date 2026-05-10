@@ -262,7 +262,9 @@ const brushIcon: Record<Tool, string> = {
 
 const modeIndicator = document.getElementById('mode-indicator')!;
 let indicatorPending = false;
+let indicatorX = 0, indicatorY = 0;
 function updateModeIndicator(cx: number, cy: number) {
+  indicatorX = cx; indicatorY = cy; // always store latest position
   if (indicatorPending) return;
   indicatorPending = true;
   requestAnimationFrame(() => {
@@ -274,8 +276,8 @@ function updateModeIndicator(cx: number, cy: number) {
     }
     modeIndicator.textContent = icon;
     modeIndicator.style.display = 'block';
-    modeIndicator.style.left = (cx + 16) + 'px';
-    modeIndicator.style.top = (cy - 24) + 'px';
+    modeIndicator.style.left = (indicatorX + 16) + 'px';
+    modeIndicator.style.top = (indicatorY - 24) + 'px';
   });
 }
 

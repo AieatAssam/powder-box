@@ -245,12 +245,12 @@
       }
 
       /* Action buttons */
-      .actions {
+      .actions-row {
         display: flex;
         gap: 0.25rem;
-        margin-left: auto;
-        flex-shrink: 0;
+        justify-content: flex-end;
       }
+      .actions-row:first-child { margin-bottom: 0.2rem; }
       .action-btn {
         padding: 0.3rem 0.6rem;
         border: 1px solid var(--border);
@@ -412,8 +412,9 @@
         .tool-btn { width: 34px; height: 34px; font-size: 1rem; padding: 0; justify-content: center; min-width: 34px; }
         .tool-label { display: none; }
         .tool-shortcut { display: none; }
-        .actions { flex-wrap: wrap; gap: 0.15rem; margin-left: 0; width: 100%; justify-content: center; margin-top: 0.2rem; }
-        .actions .action-btn { font-size: 0.6rem; padding: 0.2rem 0.35rem; }
+        .actions-row { flex-wrap: wrap; gap: 0.15rem; width: 100%; justify-content: center; }
+        .actions-row .action-btn { font-size: 0.6rem; padding: 0.2rem 0.35rem; }
+        .actions-row:first-child { margin-bottom: 0.15rem; }
         .brush-group label { display: none; }
         .brush-group button { width: 22px; height: 22px; }
         .separator { height: 24px; }
@@ -470,16 +471,15 @@
         </div>
       </div>
 
-      <div class="actions">
+      <div class="actions-row">
         <button class="action-btn generate" id="btn-generate" title="Generate random scene (N)">🎲 Scene</button>
+        <button class="action-btn" id="btn-wind" title="Toggle wind (W)">🌬️ Off</button>
+        <button class="action-btn" id="btn-gravity" title="Flip gravity">🔄 ↓</button>
+      </div>
+      <div class="actions-row">
         <button class="action-btn" id="btn-save" title="Save canvas (Ctrl+S)">💾 Save</button>
         <button class="action-btn" id="btn-load" title="Load canvas (Ctrl+O)">📂 Load</button>
         <input type="file" id="load-input" accept=".pbox" style="display:none">
-        <div class="separator"></div>
-        <button class="action-btn" id="btn-explode" title="Explosion tool (E)">💥</button>
-        <button class="action-btn" id="btn-wind" title="Toggle wind (W)">🌬️ Off</button>
-        <button class="action-btn" id="btn-gravity" title="Flip gravity">🔄 ↓</button>
-        <div class="separator"></div>
         <button class="action-btn record" id="btn-record" title="Record GIF (G)">🎬 GIF</button>
         <button class="action-btn clear" id="btn-clear" title="Clear all (C)">✕ Clear</button>
       </div>
