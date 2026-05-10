@@ -261,16 +261,22 @@ const brushIcon: Record<Tool, string> = {
 };
 
 const modeIndicator = document.getElementById('mode-indicator')!;
+let indicatorPending = false;
 function updateModeIndicator(cx: number, cy: number) {
-  const icon = brushIcon[tool] || '';
-  if (!icon) {
-    modeIndicator.style.display = 'none';
-    return;
-  }
-  modeIndicator.textContent = icon;
-  modeIndicator.style.display = 'block';
-  modeIndicator.style.left = (cx + 16) + 'px';
-  modeIndicator.style.top = (cy - 24) + 'px';
+  if (indicatorPending) return;
+  indicatorPending = true;
+  requestAnimationFrame(() => {
+    indicatorPending = false;
+    const icon = brushIcon[tool] || '';
+    if (!icon) {
+      modeIndicator.style.display = 'none';
+      return;
+    }
+    modeIndicator.textContent = icon;
+    modeIndicator.style.display = 'block';
+    modeIndicator.style.left = (cx + 16) + 'px';
+    modeIndicator.style.top = (cy - 24) + 'px';
+  });
 }
 
 // Hide indicator on mouse leave

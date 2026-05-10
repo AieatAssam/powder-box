@@ -24,6 +24,7 @@ let tickNum = 0;
 // Fun params
 let gravityDir = 1;        // 1 = down, -1 = up
 let windDir = 0;           // -1 = left, 0 = off, 1 = right, 2 = random gusts
+let effectiveWind = 0;     // cached wind direction for this tick
 
 
 // ─── Pre-allocated pixel buffer ─────────────────────────────────
@@ -42,18 +43,9 @@ const FIRE_IGNITE_CHANCE = 8;   // 1 in 8 to ignite adjacent fuel
 const LAVA_IGNITE_CHANCE = 4;   // 1 in 4
 
 // ─── Wind helper ────────────────────────────────────────────────
-/** Get the effective wind direction for the current tick (handles gust mode) */
-function getWindDir(): number {
-  if (windDir === 2) {
-    // Random gusts: direction flips every few ticks
-    return (tickNum % 60 < 30) ? 1 : -1;
-  }
-  return windDir;
-}
-
 /** Apply wind force to a particle at (x,y): tries to push it in wind direction */
 function applyWind(x: number, y: number): boolean {
-  const wd = getWindDir();
+  const wd = effectiveWind;
   if (wd === 0) return false;
   const tx = x + wd;
   if (!inBounds(tx, y)) return false;
@@ -138,10 +130,8 @@ function placeAt(cx: number, cy: number, elem: number, radius: number, lifetime 
 
 // ─── Element-specific physics ───────────────────────────────────
 
-const G = () => gravityDir; // shorthand: +1 = down, -1 = up
-
 function tickSand(x: number, y: number) {
-  const dy = G();
+  const dy = gravityDir;
   // Fall in gravity direction
   if (inBounds(x, y + dy) && get(x, y + dy) === Element.EMPTY) {
     swap(x, y, x, y + dy);
@@ -176,7 +166,7 @@ function tickSand(x: number, y: number) {
 }
 
 function tickLiquid(x: number, y: number, spreadRate: number) {
-  const dy = G();
+  const dy = gravityDir;
   // Fall in gravity direction
   if (inBounds(x, y + dy)) {
     const below = get(x, y + dy);
@@ -205,7 +195,7 @@ function tickLiquid(x: number, y: number, spreadRate: number) {
 
 function tickGas(x: number, y: number, spreadRate: number) {
   // Rise opposite to gravity direction
-  const dy = -G();
+  const dy = -gravityDir;
   if (inBounds(x, y + dy) && get(x, y + dy) === Element.EMPTY) {
     swap(x, y, x, y + dy);
     return;
@@ -307,7 +297,7 @@ function tickLava(x: number, y: number) {
   }
 
   // Fall in gravity direction
-  const dy = G();
+  const dy = gravityDir;
   const gravityBelow = inBounds(x, y + dy) ? get(x, y + dy) : -1;
   if (gravityBelow === Element.EMPTY) { swap(x, y, x, y + dy); return; }
   if (LIQUIDS.has(gravityBelow as Element) && gravityBelow !== Element.LAVA && gravityBelow !== Element.ACID) {
@@ -394,6 +384,8 @@ function tickSteam(x: number, y: number) {
 // ─── Main physics tick ──────────────────────────────────────────
 function tick() {
   tickNum++;
+  // Cache effective wind direction for this tick (gusts change slower)
+  effectiveWind = windDir === 2 ? (tickNum % 60 < 30 ? 1 : -1) : windDir;
 
   // Process input
   if (inputActive && inBounds(inputX, inputY)) {
