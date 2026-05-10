@@ -536,8 +536,10 @@ async function encodeGIF(frames: Uint8Array[]) {
   btnRecord.textContent = '🎬 GIF';
 }
 
-// ─── Pause state ────────────────────────────────────────────────
-const imgData = ctx.createImageData(CANVAS_W, CANVAS_H);
+// ─── GPU-accelerated pixel rendering ───────────────────────────
+const offscreen = new OffscreenCanvas(GRID_W, GRID_H);
+const offCtx = offscreen.getContext('2d')!;
+const gridImgData = offCtx.createImageData(GRID_W, GRID_H);
 let paused = false;
 const pauseOverlay = document.createElement('div');
 pauseOverlay.style.cssText = `
@@ -600,28 +602,12 @@ worker.onmessage = (e: MessageEvent<FrameMessage | StateSnapshotMessage>) => {
 
   if (paused) return;
 
-  // Scale grid pixels to canvas (CELL_PX ×)
-  const scale = CELL_PX;
-  for (let sy = 0; sy < GRID_H; sy++) {
-    for (let sx = 0; sx < GRID_W; sx++) {
-      const si = (sy * GRID_W + sx) * 4;
-      const r = src[si];
-      const g = src[si + 1];
-      const b = src[si + 2];
-      const a = src[si + 3];
-      for (let dy = 0; dy < scale; dy++) {
-        for (let dx = 0; dx < scale; dx++) {
-          const di = ((sy * scale + dy) * CANVAS_W + (sx * scale + dx)) * 4;
-          imgData.data[di] = r;
-          imgData.data[di + 1] = g;
-          imgData.data[di + 2] = b;
-          imgData.data[di + 3] = a;
-        }
-      }
-    }
-  }
-
-  ctx.putImageData(imgData, 0, 0);
+  // GPU-accelerated scaling: draw grid-resolution pixels onto offscreen canvas,
+  // then let the GPU handle scaling via drawImage (much faster than CPU loop).
+  gridImgData.data.set(src);
+  offCtx.putImageData(gridImgData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(offscreen, 0, 0, CANVAS_W, CANVAS_H);
   queueTick();
 };
 

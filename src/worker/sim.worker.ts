@@ -258,6 +258,9 @@ function tickFire(x: number, y: number) {
   }
   life[idx(x, y)] = l - 1;
 
+  // Smoke rises opposite to gravity
+  const smokeDy = -gravityDir;
+
   // Spread to adjacent fuel
   const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
   for (const [dx, dy] of dirs) {
@@ -296,9 +299,9 @@ function tickFire(x: number, y: number) {
     }
   }
 
-  // Random upward smoke
-  if (Math.random() < 0.08 && inBounds(x, y - 1) && get(x, y - 1) === Element.EMPTY) {
-    set(x, y - 1, Element.SMOKE, SMOKE_LIFETIME);
+  // Random smoke in anti-gravity direction
+  if (Math.random() < 0.08 && inBounds(x, y + smokeDy) && get(x, y + smokeDy) === Element.EMPTY) {
+    set(x, y + smokeDy, Element.SMOKE, SMOKE_LIFETIME);
   }
 }
 
@@ -401,9 +404,9 @@ function tickSmoke(x: number, y: number) {
 function tickSteam(x: number, y: number) {
   const l = life[idx(x, y)];
   if (l === 0) {
-    // Condense back to water if possible
-    const below = inBounds(x, y + 1) ? get(x, y + 1) : -1;
-    if (below === Element.EMPTY || below === Element.STEAM || below === Element.SMOKE) {
+    // Condense back to water in gravity direction
+    const condDir = inBounds(x, y + gravityDir) ? get(x, y + gravityDir) : -1;
+    if (condDir === Element.EMPTY || condDir === Element.STEAM || condDir === Element.SMOKE) {
       set(x, y, Element.WATER);
     } else {
       set(x, y, Element.EMPTY);
