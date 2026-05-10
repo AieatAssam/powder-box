@@ -10,11 +10,14 @@ Draw with sand, water, fire, lava, acid, and more. Watch emergent physics unfold
 
 ## ✨ What It Looks Like
 
-| Clean UI | Procedural Scene | Another Scene |
-|:--------:|:----------------:|:-------------:|
-| ![Clean UI](powderbox-sc-00-initial.png) | ![Volcano Island](powderbox-sc-01-volcano.png) | ![Scene 2](powderbox-sc-02.png) |
-| **More Variety** | **More Variety** | **More Variety** |
-| ![Scene 3](powderbox-sc-03.png) | ![Scene 5](powderbox-sc-05.png) | ![Scene 6](powderbox-sc-06.png) |
+### Procedurally Generated Scenes
+
+| | | |
+|:-:|:-:|:-:|
+| ![Volcano Island](powderbox-sc-01-volcano.png) | ![Scene 2](powderbox-sc-02.png) | ![Scene 3](powderbox-sc-03.png) |
+| ![Scene 4](powderbox-sc-04.png) | ![Scene 5](powderbox-sc-05.png) | ![Scene 6](powderbox-sc-06.png) |
+
+Each click of **🎲 Scene** generates a unique composition — islands, canyons, mandalas, galaxies, caves, and more — that physics brings to life.
 
 > Screenshots from the live app at **https://aieatassam.github.io/powder-box/**
 
