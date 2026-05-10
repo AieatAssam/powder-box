@@ -178,6 +178,12 @@ function tickLiquid(x: number, y: number, spreadRate: number) {
       set(x, y, Element.EMPTY);
       return;
     }
+    // Water + acid = neutralised (both consumed, releases steam)
+    if (get(x, y) === Element.WATER && below === Element.ACID) {
+      set(x, y + dy, Element.STEAM, STEAM_LIFETIME);
+      set(x, y, Element.EMPTY);
+      return;
+    }
   }
 
   // Spread sideways
@@ -344,8 +350,9 @@ function tickAcid(x: number, y: number) {
     if (!inBounds(nx, ny)) continue;
     const a = get(nx, ny);
     if (a !== Element.EMPTY && a !== Element.ACID && a !== Element.STEAM && a !== Element.SMOKE) {
-      if (Math.random() < 0.15) {
-        // Acid consumed, target dissolved
+      // Water dissolves instantly on contact; other materials are slower
+      const dissolveChance = a === Element.WATER ? 1.0 : 0.25;
+      if (Math.random() < dissolveChance) {
         set(nx, ny, Element.EMPTY);
         if (Math.random() < 0.5) {
           set(x, y, Element.EMPTY); // acid used up
