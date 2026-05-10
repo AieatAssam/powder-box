@@ -164,21 +164,27 @@
         background: #2a2a3e;
       }
       .swatch {
-        display: inline-block;
-        width: 18px;
-        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
         border-radius: 4px;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 0 4px rgba(255,255,255,0.05);
+        font-size: 0.8rem;
+        line-height: 1;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+        text-shadow: 0 0 3px rgba(0,0,0,0.6);
       }
       .eraser-swatch {
         background: transparent !important;
         border: 1px dashed var(--text2);
         color: var(--text2);
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         display: flex;
         align-items: center;
         justify-content: center;
         box-shadow: none;
+        text-shadow: none;
       }
       .tool-label {
         font-size: 0.6rem;
@@ -449,39 +455,39 @@
     <!-- ═══ Toolbar ═══ -->
     <div class="toolbar">
       <div class="toolbar-row" id="tool-row">
-        <button class="tool-btn" id="tool-sand" title="Sand (1)"><span class="swatch" style="background:#d4a574"></span><span class="tool-label">Sand</span><span class="tool-shortcut">1</span></button>
-        <button class="tool-btn" id="tool-water" title="Water (2)"><span class="swatch" style="background:#3498db"></span><span class="tool-label">Water</span><span class="tool-shortcut">2</span></button>
-        <button class="tool-btn" id="tool-fire" title="Fire (3)"><span class="swatch" style="background:#ff5722"></span><span class="tool-label">Fire</span><span class="tool-shortcut">3</span></button>
-        <button class="tool-btn" id="tool-wall" title="Wall (4)"><span class="swatch" style="background:#64646e"></span><span class="tool-label">Wall</span><span class="tool-shortcut">4</span></button>
-        <button class="tool-btn" id="tool-wood" title="Wood (5)"><span class="swatch" style="background:#8b4513"></span><span class="tool-label">Wood</span><span class="tool-shortcut">5</span></button>
-        <button class="tool-btn" id="tool-oil" title="Oil (6)"><span class="swatch" style="background:#50461e"></span><span class="tool-label">Oil</span><span class="tool-shortcut">6</span></button>
-        <button class="tool-btn" id="tool-plant" title="Plant (7)"><span class="swatch" style="background:#2e7d32"></span><span class="tool-label">Plant</span><span class="tool-shortcut">7</span></button>
-        <button class="tool-btn" id="tool-lava" title="Lava (8)"><span class="swatch" style="background:#ff4500"></span><span class="tool-label">Lava</span><span class="tool-shortcut">8</span></button>
-        <button class="tool-btn" id="tool-acid" title="Acid (9)"><span class="swatch" style="background:#00ff00"></span><span class="tool-label">Acid</span><span class="tool-shortcut">9</span></button>
-        <button class="tool-btn" id="tool-explode" title="Explode (E)"><span class="swatch" style="background:#ff4444;box-shadow:inset 0 0 4px #ff8800"></span><span class="tool-label">Boom</span><span class="tool-shortcut">E</span></button>
-        <button class="tool-btn" id="tool-eraser" title="Eraser (0)"><span class="swatch eraser-swatch">✕</span><span class="tool-label">Erase</span><span class="tool-shortcut">0</span></button>
+        <button class="tool-btn" id="tool-sand"><span class="swatch" style="background:#d4a574">🟤</span><span class="tool-label">Sand</span><span class="tool-shortcut">1</span></button>
+        <button class="tool-btn" id="tool-water"><span class="swatch" style="background:#3498db">💧</span><span class="tool-label">Water</span><span class="tool-shortcut">2</span></button>
+        <button class="tool-btn" id="tool-fire"><span class="swatch" style="background:#ff5722">🔥</span><span class="tool-label">Fire</span><span class="tool-shortcut">3</span></button>
+        <button class="tool-btn" id="tool-wall"><span class="swatch" style="background:#64646e">🧱</span><span class="tool-label">Wall</span><span class="tool-shortcut">4</span></button>
+        <button class="tool-btn" id="tool-wood"><span class="swatch" style="background:#8b4513">🪵</span><span class="tool-label">Wood</span><span class="tool-shortcut">5</span></button>
+        <button class="tool-btn" id="tool-oil"><span class="swatch" style="background:#50461e">🛢️</span><span class="tool-label">Oil</span><span class="tool-shortcut">6</span></button>
+        <button class="tool-btn" id="tool-plant"><span class="swatch" style="background:#2e7d32">🌿</span><span class="tool-label">Plant</span><span class="tool-shortcut">7</span></button>
+        <button class="tool-btn" id="tool-lava"><span class="swatch" style="background:#ff4500">🌋</span><span class="tool-label">Lava</span><span class="tool-shortcut">8</span></button>
+        <button class="tool-btn" id="tool-acid"><span class="swatch" style="background:#00ff00">🧪</span><span class="tool-label">Acid</span><span class="tool-shortcut">9</span></button>
+        <button class="tool-btn" id="tool-explode"><span class="swatch" style="background:#ff4444;box-shadow:inset 0 0 4px #ff8800">💥</span><span class="tool-label">Boom</span><span class="tool-shortcut">E</span></button>
+        <button class="tool-btn" id="tool-eraser"><span class="swatch eraser-swatch">✕</span><span class="tool-label">Erase</span><span class="tool-shortcut">0</span></button>
 
         <div class="separator"></div>
 
         <div class="brush-group">
           <label>Brush</label>
-          <button id="brush-decrease" title="Decrease brush (—)">−</button>
+          <button id="brush-decrease">−</button>
           <span class="brush-count" id="brush-size-display">3</span>
-          <button id="brush-increase" title="Increase brush (=)">+</button>
+          <button id="brush-increase">+</button>
         </div>
       </div>
 
       <div class="actions-row">
-        <button class="action-btn generate" id="btn-generate" title="Generate random scene (N)">🎲 Scene</button>
-        <button class="action-btn" id="btn-wind" title="Toggle wind (W)">🌬️ Off</button>
-        <button class="action-btn" id="btn-gravity" title="Flip gravity">🔄 ↓</button>
+        <button class="action-btn generate" id="btn-generate">🎲 Scene</button>
+        <button class="action-btn" id="btn-wind">🌬️ Off</button>
+        <button class="action-btn" id="btn-gravity">🔄 ↓</button>
       </div>
       <div class="actions-row">
-        <button class="action-btn" id="btn-save" title="Save canvas (Ctrl+S)">💾 Save</button>
-        <button class="action-btn" id="btn-load" title="Load canvas (Ctrl+O)">📂 Load</button>
+        <button class="action-btn" id="btn-save">💾 Save</button>
+        <button class="action-btn" id="btn-load">📂 Load</button>
         <input type="file" id="load-input" accept=".pbox" style="display:none">
-        <button class="action-btn record" id="btn-record" title="Record GIF (G)">🎬 GIF</button>
-        <button class="action-btn clear" id="btn-clear" title="Clear all (C)">✕ Clear</button>
+        <button class="action-btn record" id="btn-record">🎬 GIF</button>
+        <button class="action-btn clear" id="btn-clear">✕ Clear</button>
       </div>
     </div>
 
