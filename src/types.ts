@@ -163,15 +163,33 @@ export interface PlaceCellsMessage {
   data: ArrayBuffer;
 }
 
+export interface SaveStateMessage {
+  type: 'saveState';
+}
+
+export interface LoadStateMessage {
+  type: 'loadState';
+  /** Serialised grid: [W(16bit LE), H(16bit LE), grid[0..W*H-1](8bit), life[0..W*H-1](8bit)] */
+  data: ArrayBuffer;
+}
+
 export type WorkerInput =
   | InitMessage
   | InputMessage
   | TickMessage
   | ClearMessage
-  | PlaceCellsMessage;
+  | PlaceCellsMessage
+  | SaveStateMessage
+  | LoadStateMessage;
 
 export interface FrameMessage {
   type: 'frame';
   /** RGBA pixel buffer (transferable) */
   pixels: Uint8ClampedArray;
+}
+
+export interface StateSnapshotMessage {
+  type: 'stateSnapshot';
+  /** Serialised: grid[0..W*H-1](8bit), life[0..W*H-1](8bit) */
+  data: ArrayBuffer;
 }

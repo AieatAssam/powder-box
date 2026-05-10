@@ -6,7 +6,7 @@ import {
   Tool,
   GRID_W, GRID_H,
   PALETTE_FLAT, PALETTE_LEN,
-  type WorkerInput, type FrameMessage,
+  type WorkerInput, type FrameMessage, type StateSnapshotMessage,
 } from '../types';
 
 // ─── State owned by the worker ──────────────────────────────────
@@ -487,6 +487,25 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
           life[gi] = lifetime;
         }
       }
+      break;
+    }
+    case 'saveState': {
+      // Serialise grid + life into one buffer
+      const buf = new ArrayBuffer(W * H * 2);
+      const dst = new Uint8Array(buf);
+      dst.set(grid);
+      dst.set(life, W * H);
+      const snap: StateSnapshotMessage = { type: 'stateSnapshot', data: buf };
+      (self as unknown as Worker).postMessage(snap, [buf]);
+      break;
+    }
+    case 'loadState': {
+      const src = new Uint8Array(msg.data);
+      const w = new DataView(msg.data).getUint16(0, true);
+      const h = new DataView(msg.data).getUint16(2, true);
+      if (w !== W || h !== H) break;
+      grid.set(src.subarray(4, 4 + W * H));
+      life.set(src.subarray(4 + W * H, 4 + W * H * 2));
       break;
     }
   }

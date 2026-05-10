@@ -1,7 +1,7 @@
 import {
   Tool, BRUSH_SIZES,
   GRID_W, GRID_H, CELL_PX,
-  type BrushSize, type WorkerInput, type FrameMessage,
+  type BrushSize, type WorkerInput, type FrameMessage, type StateSnapshotMessage,
 } from './types';
 import { encodeGifBlob, type GifFrameData } from './gif-encoder';
 import { SCENES, buildScenePlacement } from './scenes';
@@ -71,6 +71,15 @@ document.addEventListener('keydown', (e) => {
   if (key.toLowerCase() === 'g') {
     toggleRecording();
     e.preventDefault();
+  }
+  // Ctrl+S = save, Ctrl+O = load
+  if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 's') {
+    e.preventDefault();
+    saveToFile();
+  }
+  if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'o') {
+    e.preventDefault();
+    (document.getElementById('load-input') as HTMLInputElement).click();
   }
 });
 
@@ -221,6 +230,27 @@ document.getElementById('btn-clear')!.addEventListener('click', () => {
   worker.postMessage({ type: 'clear' } satisfies WorkerInput);
   canvasState = 'fresh';
 });
+
+// ─── Save / Load buttons ───────────────────────────────────────
+document.getElementById('btn-save')!.addEventListener('click', saveToFile);
+const loadInput = document.getElementById('load-input') as HTMLInputElement;
+document.getElementById('btn-load')!.addEventListener('click', () => loadInput.click());
+loadInput.addEventListener('change', (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) loadFromFile(file);
+  loadInput.value = ''; // allow re-selecting same file
+});
+
+// Try restoring autosave on init
+let autosaveRestored = false;
+const autosaveHandler = () => {
+  if (!autosaveRestored) {
+    autosaveRestored = true;
+    setTimeout(tryRestoreAutosave, 100);
+  }
+};
+// Hook into first frame to restore autosave after worker is ready
+worker.addEventListener('message', autosaveHandler, { once: true });
 
 // ─── Scene Generation ───────────────────────────────────────────
 let currentSceneIndex = 0;
@@ -424,8 +454,16 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-worker.onmessage = (e: MessageEvent<FrameMessage>) => {
+worker.onmessage = (e: MessageEvent<FrameMessage | StateSnapshotMessage>) => {
   const msg = e.data;
+  if (msg.type === 'stateSnapshot') {
+    // Resolve pending save-to-file
+    if (pendingSaveResolve) {
+      pendingSaveResolve(msg.data);
+      pendingSaveResolve = null;
+    }
+    return;
+  }
   if (msg.type !== 'frame') return;
 
   const src = msg.pixels;
@@ -470,6 +508,93 @@ worker.onmessage = (e: MessageEvent<FrameMessage>) => {
 
   ctx.putImageData(imgData, 0, 0);
 };
+
+// ─── Save / Load ────────────────────────────────────────────────
+const PBOX_MAGIC = 0x50424F58; // 'PBOX' as uint32 LE
+let pendingSaveResolve: ((data: ArrayBuffer) => void) | null = null;
+
+function saveToFile() {
+  // Request state from worker
+  worker.postMessage({ type: 'saveState' } satisfies WorkerInput);
+  pendingSaveResolve = (data: ArrayBuffer) => {
+    const gridArr = new Uint8Array(data);
+    const fileBuf = new ArrayBuffer(8 + data.byteLength);
+    const fw = new DataView(fileBuf);
+    fw.setUint32(0, PBOX_MAGIC, true);       // magic
+    fw.setUint16(4, GRID_W, true);             // width
+    fw.setUint16(6, GRID_H, true);             // height
+    new Uint8Array(fileBuf, 8).set(gridArr);    // grid + life
+
+    const blob = new Blob([fileBuf], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `powderbox-${Date.now()}.pbox`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+}
+
+function loadFromFile(file: File) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const buf = reader.result as ArrayBuffer;
+    const view = new DataView(buf);
+    const magic = view.getUint32(0, true);
+    if (magic !== PBOX_MAGIC) {
+      alert('Not a valid PowderBox save (.pbox) file.');
+      return;
+    }
+    const w = view.getUint16(4, true);
+    const h = view.getUint16(6, true);
+    if (w !== GRID_W || h !== GRID_H) {
+      alert(`Save file has wrong dimensions (${w}×${h}), expected ${GRID_W}×${GRID_H}.`);
+      return;
+    }
+    const payload = buf.slice(8);
+    worker.postMessage({ type: 'loadState', data: payload }, [payload]);
+    canvasState = 'userModified';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── Auto-save to localStorage ─────────────────────────────────
+function autoSave() {
+  worker.postMessage({ type: 'saveState' } satisfies WorkerInput);
+  pendingSaveResolve = (data: ArrayBuffer) => {
+    try {
+      const bytes = new Uint8Array(data);
+      const b64 = btoa(String.fromCharCode(...bytes));
+      localStorage.setItem('powderbox_autosave', b64);
+    } catch { /* quota exceeded, ignore */ }
+  };
+}
+
+// Auto-save every 10 seconds while not paused
+setInterval(() => {
+  if (!paused) autoSave();
+}, 10000);
+
+// Restore autosave on load (after worker init)
+function tryRestoreAutosave() {
+  const b64 = localStorage.getItem('powderbox_autosave');
+  if (!b64) return;
+  try {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    if (bytes.length !== GRID_W * GRID_H * 2) return;
+    // Prepend dimensions so the worker's loadState handler can verify
+    const meta = new ArrayBuffer(4);
+    const mv = new DataView(meta);
+    mv.setUint16(0, GRID_W, true);
+    mv.setUint16(2, GRID_H, true);
+    const combined = new Uint8Array(4 + bytes.length);
+    combined.set(new Uint8Array(meta), 0);
+    combined.set(bytes, 4);
+    const payload = combined.buffer;
+    worker.postMessage({ type: 'loadState', data: payload }, [payload]);
+    canvasState = 'userModified';
+  } catch { /* corrupt autosave, ignore */ }
+}
 
 // ─── Simulation loop ────────────────────────────────────────────
 function loop() {
