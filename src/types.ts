@@ -51,6 +51,7 @@ export const enum Tool {
   LAVA = 8,
   ACID = 9,
   ERASER = 10,
+  EXPLOSIVE = 11,
 }
 
 export const BRUSH_SIZES = [1, 2, 3, 5, 8, 14] as const;

@@ -5,10 +5,9 @@ import {
 } from './types';
 
 // ─── Fun toggles ────────────────────────────────────────────────
-type WindState = 0 | 1 | -1;
+type WindState = 0 | 1 | -1 | 2;
 let windState: WindState = 0;
 let gravityReversed = false;
-let explosionMode = false;
 import { encodeGifBlob, type GifFrameData } from './gif-encoder';
 import { SCENES, buildScenePlacement } from './scenes';
 
@@ -52,7 +51,7 @@ const toolByKey: Record<string, Tool> = {
   '1': Tool.SAND, '2': Tool.WATER, '3': Tool.FIRE,
   '4': Tool.WALL, '5': Tool.WOOD, '6': Tool.OIL,
   '7': Tool.PLANT, '8': Tool.LAVA, '9': Tool.ACID,
-  '0': Tool.ERASER,
+  '0': Tool.ERASER, 'e': Tool.EXPLOSIVE,
 };
 
 document.addEventListener('keydown', (e) => {
@@ -112,9 +111,9 @@ function onPointerDown(cx: number, cy: number) {
   mouseDown = true;
   const [gx, gy] = canvasToGrid(cx, cy);
   lastX = gx; lastY = gy;
-  if (explosionMode) {
+  if (tool === Tool.EXPLOSIVE) {
     mouseDown = false; // single click, no drag
-    const radius = brushSize * 2.5;
+    const radius = brushSize * 3 + 4;
     worker.postMessage({ type: 'explode', x: gx, y: gy, radius } satisfies WorkerInput);
     return;
   }
@@ -127,6 +126,7 @@ function onPointerMove(cx: number, cy: number) {
     lastX = gx; lastY = gy;
     if (mouseDown) sendInput(gx, gy, true);
   }
+  updateModeIndicator(cx, cy);
 }
 
 function onPointerUp() {
@@ -170,6 +170,7 @@ const toolButtons: Record<string, Tool> = {
   'tool-lava': Tool.LAVA,
   'tool-acid': Tool.ACID,
   'tool-eraser': Tool.ERASER,
+  'tool-explode': Tool.EXPLOSIVE,
 };
 
 const toolNames: Record<Tool, string> = {
@@ -183,6 +184,7 @@ const toolNames: Record<Tool, string> = {
   [Tool.LAVA]: 'Lava',
   [Tool.ACID]: 'Acid',
   [Tool.ERASER]: 'Eraser',
+  [Tool.EXPLOSIVE]: 'Explode',
 };
 
 let activeToolBtn: HTMLElement | null = null;
@@ -243,29 +245,43 @@ document.getElementById('btn-clear')!.addEventListener('click', () => {
   canvasState = 'fresh';
 });
 
-// ─── Fun buttons: Explosion, Wind, Gravity ────────────────────
-const btnExplode = document.getElementById('btn-explode')!;
+// ─── Mode indicator (follows mouse) ──────────────────────────
+const modeIndicator = document.getElementById('mode-indicator')!;
+function getModeIndicatorText(): string {
+  const parts: string[] = [];
+  if (gravityReversed) parts.push('🔄↑');
+  if (windState === 1) parts.push('🌬️→');
+  else if (windState === -1) parts.push('🌬️←');
+  else if (windState === 2) parts.push('🌬️🎲');
+  if (tool === Tool.EXPLOSIVE) parts.push('💥');
+  return parts.join(' ');
+}
+function updateModeIndicator(cx: number, cy: number) {
+  const text = getModeIndicatorText();
+  if (!text) {
+    modeIndicator.style.display = 'none';
+    return;
+  }
+  modeIndicator.textContent = text;
+  modeIndicator.style.display = 'block';
+  modeIndicator.style.left = (cx + 16) + 'px';
+  modeIndicator.style.top = (cy - 24) + 'px';
+}
+
+// Hide on mouse leave
+canvas.addEventListener('mouseleave', () => { modeIndicator.style.display = 'none'; });
+
+// ─── Fun buttons: Wind, Gravity ───────────────────────────────
 const btnWind = document.getElementById('btn-wind')!;
 const btnGravity = document.getElementById('btn-gravity')!;
 
-btnExplode.addEventListener('click', () => {
-  explosionMode = !explosionMode;
-  btnExplode.classList.toggle('active', explosionMode);
-  if (explosionMode) {
-    // Deactivate tool selection visually
-    if (activeToolBtn) activeToolBtn.classList.remove('active');
-    statusTool.textContent = '💥 Explode';
-  } else {
-    selectTool(tool);
-  }
-});
-
-const windLabels = ['🌬️ Off', '🌬️ ←', '🌬️ →'];
+// Wind labels: arrow points where wind blows TO
+const windLabels = ['🌬️', '🌬️ →', '🌬️ ←', '🌬️ 🎲'];
+const windStates: WindState[] = [0, 1, -1, 2];
 function cycleWind() {
-  const states: WindState[] = [0, 1, -1];
-  const idx = states.indexOf(windState);
-  const next = (idx + 1) % states.length;
-  windState = states[next];
+  const idx = windStates.indexOf(windState);
+  const next = (idx + 1) % windStates.length;
+  windState = windStates[next];
   worker.postMessage({ type: 'wind', direction: windState } satisfies WorkerInput);
   btnWind.textContent = windLabels[next];
 }
@@ -278,13 +294,9 @@ btnGravity.addEventListener('click', () => {
   btnGravity.textContent = gravityReversed ? '🔄 ↑' : '🔄 ↓';
 });
 
-// Keyboard shortcuts for fun features
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'e' && !e.ctrlKey && !e.metaKey) {
-    btnExplode.click();
-    e.preventDefault();
-  }
-  if (e.key === 'w' && !e.ctrlKey && !e.metaKey) {
+  if (e.key.toLowerCase() === 'w' && !e.ctrlKey && !e.metaKey) {
     cycleWind();
     e.preventDefault();
   }

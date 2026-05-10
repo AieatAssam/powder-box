@@ -407,12 +407,15 @@
         h1 { font-size: 1rem; }
         h1 small { display: none; }
         .status { font-size: 0.65rem; }
-        .toolbar { padding: 0.3rem; gap: 0.2rem; }
-        .tool-btn { width: 34px; height: 34px; font-size: 1rem; padding: 0; justify-content: center; }
+        .toolbar { padding: 0.3rem; gap: 0.2rem; flex-wrap: wrap; }
+        .toolbar-row { gap: 0.15rem; }
+        .tool-btn { width: 34px; height: 34px; font-size: 1rem; padding: 0; justify-content: center; min-width: 34px; }
         .tool-label { display: none; }
         .tool-shortcut { display: none; }
-        .actions .action-btn { font-size: 0.65rem; padding: 0.25rem 0.4rem; }
+        .actions { flex-wrap: wrap; gap: 0.15rem; margin-left: 0; width: 100%; justify-content: center; margin-top: 0.2rem; }
+        .actions .action-btn { font-size: 0.6rem; padding: 0.2rem 0.35rem; }
         .brush-group label { display: none; }
+        .brush-group button { width: 22px; height: 22px; }
         .separator { height: 24px; }
         .legend { font-size: 0.55rem; }
       }
@@ -455,6 +458,7 @@
         <button class="tool-btn" id="tool-lava" title="Lava (8)"><span class="swatch" style="background:#ff4500"></span><span class="tool-label">Lava</span><span class="tool-shortcut">8</span></button>
         <button class="tool-btn" id="tool-acid" title="Acid (9)"><span class="swatch" style="background:#00ff00"></span><span class="tool-label">Acid</span><span class="tool-shortcut">9</span></button>
         <button class="tool-btn" id="tool-eraser" title="Eraser (0)"><span class="swatch eraser-swatch">✕</span><span class="tool-label">Erase</span><span class="tool-shortcut">0</span></button>
+        <button class="tool-btn" id="tool-explode" title="Explode (E)"><span class="swatch" style="background:#ff4444; box-shadow:inset 0 0 6px #ff8800"></span><span class="tool-label">Boom</span></button>
 
         <div class="separator"></div>
 
@@ -480,6 +484,9 @@
         <button class="action-btn clear" id="btn-clear" title="Clear all (C)">✕ Clear</button>
       </div>
     </div>
+
+    <!-- ═══ Mode indicator (follows mouse) ═══ -->
+    <div id="mode-indicator" style="position:fixed;pointer-events:none;z-index:50;font-size:0.7rem;color:var(--text2);background:rgba(0,0,0,0.6);border:1px solid var(--border);border-radius:4px;padding:1px 4px;display:none;white-space:nowrap"></div>
 
     <!-- ═══ Legend ═══ -->
     <p class="legend">
