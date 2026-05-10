@@ -173,6 +173,25 @@ export interface LoadStateMessage {
   data: ArrayBuffer;
 }
 
+export interface ExplodeMessage {
+  type: 'explode';
+  x: number;
+  y: number;
+  radius: number;
+}
+
+export interface WindMessage {
+  type: 'wind';
+  /** -1 = left, 0 = off, 1 = right */
+  direction: number;
+}
+
+export interface GravityMessage {
+  type: 'gravity';
+  /** 1 = normal down, -1 = reversed up */
+  direction: number;
+}
+
 export type WorkerInput =
   | InitMessage
   | InputMessage
@@ -180,7 +199,10 @@ export type WorkerInput =
   | ClearMessage
   | PlaceCellsMessage
   | SaveStateMessage
-  | LoadStateMessage;
+  | LoadStateMessage
+  | ExplodeMessage
+  | WindMessage
+  | GravityMessage;
 
 export interface FrameMessage {
   type: 'frame';

@@ -21,6 +21,11 @@ let inputBrushSize = 3;
 let inputActive = false;
 let tickNum = 0;
 
+// Fun params
+let gravityDir = 1;        // 1 = down, -1 = up
+let windDir = 0;           // -1 = left, 0 = off, 1 = right
+
+
 // ─── Pre-allocated pixel buffer ─────────────────────────────────
 let pixels: Uint8ClampedArray;
 
@@ -35,6 +40,21 @@ const WOOD_BURN_TIME = 60;      // ticks for wood to burn before turning to fire
 const FIRE_SPREAD_CHANCE = 5;   // 1 in 5 chance per tick
 const FIRE_IGNITE_CHANCE = 8;   // 1 in 8 to ignite adjacent fuel
 const LAVA_IGNITE_CHANCE = 4;   // 1 in 4
+
+// ─── Wind helper ────────────────────────────────────────────────
+/** Apply wind force to a particle at (x,y): tries to push it in windDir */
+function applyWind(x: number, y: number): boolean {
+  if (windDir === 0) return false;
+  const tx = x + windDir;
+  if (!inBounds(tx, y)) return false;
+  // Only push if target is empty or is a gas (gases get displaced)
+  const target = get(tx, y);
+  if (target === Element.EMPTY) {
+    swap(x, y, tx, y);
+    return true;
+  }
+  return false;
+}
 
 // ─── Initialisation ─────────────────────────────────────────────
 function init(w: number, h: number) {
@@ -108,47 +128,53 @@ function placeAt(cx: number, cy: number, elem: number, radius: number, lifetime 
 
 // ─── Element-specific physics ───────────────────────────────────
 
+const G = () => gravityDir; // shorthand: +1 = down, -1 = up
+
 function tickSand(x: number, y: number) {
-  // Fall straight down
-  if (inBounds(x, y + 1) && get(x, y + 1) === Element.EMPTY) {
-    swap(x, y, x, y + 1);
+  const dy = G();
+  // Fall in gravity direction
+  if (inBounds(x, y + dy) && get(x, y + dy) === Element.EMPTY) {
+    swap(x, y, x, y + dy);
     return;
   }
   // Sink in liquids
-  if (inBounds(x, y + 1) && LIQUIDS.has(get(x, y + 1) as Element)) {
-    swap(x, y, x, y + 1);
+  if (inBounds(x, y + dy) && LIQUIDS.has(get(x, y + dy) as Element)) {
+    swap(x, y, x, y + dy);
     return;
   }
   // Fall diagonally
   const dir = ((x + y) & 1) ? 1 : -1;
-  if (inBounds(x + dir, y + 1) && get(x + dir, y + 1) === Element.EMPTY) {
-    swap(x, y, x + dir, y + 1);
+  if (inBounds(x + dir, y + dy) && get(x + dir, y + dy) === Element.EMPTY) {
+    swap(x, y, x + dir, y + dy);
     return;
   }
-  if (inBounds(x - dir, y + 1) && get(x - dir, y + 1) === Element.EMPTY) {
-    swap(x, y, x - dir, y + 1);
+  if (inBounds(x - dir, y + dy) && get(x - dir, y + dy) === Element.EMPTY) {
+    swap(x, y, x - dir, y + dy);
     return;
   }
   // Sink diagonally in liquids
-  if (inBounds(x + dir, y + 1) && LIQUIDS.has(get(x + dir, y + 1) as Element)) {
-    swap(x, y, x + dir, y + 1);
+  if (inBounds(x + dir, y + dy) && LIQUIDS.has(get(x + dir, y + dy) as Element)) {
+    swap(x, y, x + dir, y + dy);
     return;
   }
-  if (inBounds(x - dir, y + 1) && LIQUIDS.has(get(x - dir, y + 1) as Element)) {
-    swap(x, y, x - dir, y + 1);
+  if (inBounds(x - dir, y + dy) && LIQUIDS.has(get(x - dir, y + dy) as Element)) {
+    swap(x, y, x - dir, y + dy);
     return;
   }
+  // Wind push
+  if (windDir && Math.random() < 0.3) applyWind(x, y);
 }
 
 function tickLiquid(x: number, y: number, spreadRate: number) {
-  // Fall straight down
-  if (inBounds(x, y + 1)) {
-    const below = get(x, y + 1);
-    if (below === Element.EMPTY) { swap(x, y, x, y + 1); return; }
+  const dy = G();
+  // Fall in gravity direction
+  if (inBounds(x, y + dy)) {
+    const below = get(x, y + dy);
+    if (below === Element.EMPTY) { swap(x, y, x, y + dy); return; }
     // Water/oil floats on lava (lava is denser)
     if (get(x, y) === Element.WATER && below === Element.LAVA) {
       // Water + lava = steam
-      set(x, y + 1, Element.STEAM, STEAM_LIFETIME);
+      set(x, y + dy, Element.STEAM, STEAM_LIFETIME);
       set(x, y, Element.EMPTY);
       return;
     }
@@ -163,12 +189,15 @@ function tickLiquid(x: number, y: number, spreadRate: number) {
       return;
     }
   }
+  // Wind push
+  if (windDir && Math.random() < 0.15) applyWind(x, y);
 }
 
 function tickGas(x: number, y: number, spreadRate: number) {
-  // Rise upward
-  if (inBounds(x, y - 1) && get(x, y - 1) === Element.EMPTY) {
-    swap(x, y, x, y - 1);
+  // Rise opposite to gravity direction
+  const dy = -G();
+  if (inBounds(x, y + dy) && get(x, y + dy) === Element.EMPTY) {
+    swap(x, y, x, y + dy);
     return;
   }
   // Spread sideways
@@ -178,6 +207,12 @@ function tickGas(x: number, y: number, spreadRate: number) {
     if (inBounds(tx, y) && get(tx, y) === Element.EMPTY) {
       swap(x, y, tx, y);
       return;
+    }
+  }
+  // Wind pushes gases strongly
+  if (windDir) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (applyWind(x, y)) return;
     }
   }
 }
@@ -261,18 +296,19 @@ function tickLava(x: number, y: number) {
     }
   }
 
-  // Fall like a thick liquid
-  const below = inBounds(x, y + 1) ? get(x, y + 1) : -1;
-  if (below === Element.EMPTY) { swap(x, y, x, y + 1); return; }
-  if (LIQUIDS.has(below as Element) && below !== Element.LAVA && below !== Element.ACID) {
+  // Fall in gravity direction
+  const dy = G();
+  const gravityBelow = inBounds(x, y + dy) ? get(x, y + dy) : -1;
+  if (gravityBelow === Element.EMPTY) { swap(x, y, x, y + dy); return; }
+  if (LIQUIDS.has(gravityBelow as Element) && gravityBelow !== Element.LAVA && gravityBelow !== Element.ACID) {
     // Lava sinks in water/oil (they become steam/fire)
-    if (below === Element.WATER) {
-      set(x, y + 1, Element.STEAM, STEAM_LIFETIME);
+    if (gravityBelow === Element.WATER) {
+      set(x, y + dy, Element.STEAM, STEAM_LIFETIME);
       set(x, y, Element.EMPTY);
       return;
     }
-    if (below === Element.OIL) {
-      set(x, y + 1, Element.FIRE, FIRE_LIFETIME + 15);
+    if (gravityBelow === Element.OIL) {
+      set(x, y + dy, Element.FIRE, FIRE_LIFETIME + 15);
       set(x, y, Element.EMPTY);
       return;
     }
@@ -508,5 +544,46 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
       life.set(src.subarray(4 + W * H, 4 + W * H * 2));
       break;
     }
+    case 'explode': {
+      const { x: ex, y: ey, radius: er } = msg;
+      const x1 = Math.max(0, Math.floor(ex - er));
+      const x2 = Math.min(W - 1, Math.floor(ex + er));
+      const y1 = Math.max(0, Math.floor(ey - er));
+      const y2 = Math.min(H - 1, Math.floor(ey + er));
+      for (let y = y1; y <= y2; y++) {
+        for (let x = x1; x <= x2; x++) {
+          const dx = x - ex, dy = y - ey;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > er) continue;
+          const idx_ = y * W + x;
+          const elem = grid[idx_];
+          if (elem === Element.EMPTY || elem === Element.WALL) continue;
+          // Push the particle outward: move it along dx,dy
+          const pushStrength = Math.max(1, Math.round((er - dist) * 0.5));
+          const nx = Math.round(x + (dx / Math.max(1, dist)) * pushStrength);
+          const ny = Math.round(y + (dy / Math.max(1, dist)) * pushStrength);
+          if (inBounds(nx, ny) && grid[ny * W + nx] === Element.EMPTY) {
+            grid[ny * W + nx] = grid[idx_];
+            life[ny * W + nx] = life[idx_];
+            grid[idx_] = Element.EMPTY;
+            life[idx_] = 0;
+          }
+          // Scatter fire debris
+          if (Math.random() < 0.15) {
+            const fx = x + Math.round((Math.random() - 0.5) * 4);
+            const fy = y + Math.round((Math.random() - 0.5) * 4);
+            if (inBounds(fx, fy) && grid[fy * W + fx] === Element.EMPTY)
+              grid[fy * W + fx] = Element.FIRE, life[fy * W + fx] = 15 + Math.floor(Math.random() * 20);
+          }
+        }
+      }
+      break;
+    }
+    case 'wind':
+      windDir = msg.direction;
+      break;
+    case 'gravity':
+      gravityDir = msg.direction;
+      break;
   }
 };

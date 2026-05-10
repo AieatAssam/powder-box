@@ -3,6 +3,12 @@ import {
   GRID_W, GRID_H, CELL_PX,
   type BrushSize, type WorkerInput, type FrameMessage, type StateSnapshotMessage,
 } from './types';
+
+// ─── Fun toggles ────────────────────────────────────────────────
+type WindState = 0 | 1 | -1;
+let windState: WindState = 0;
+let gravityReversed = false;
+let explosionMode = false;
 import { encodeGifBlob, type GifFrameData } from './gif-encoder';
 import { SCENES, buildScenePlacement } from './scenes';
 
@@ -106,6 +112,12 @@ function onPointerDown(cx: number, cy: number) {
   mouseDown = true;
   const [gx, gy] = canvasToGrid(cx, cy);
   lastX = gx; lastY = gy;
+  if (explosionMode) {
+    mouseDown = false; // single click, no drag
+    const radius = brushSize * 2.5;
+    worker.postMessage({ type: 'explode', x: gx, y: gy, radius } satisfies WorkerInput);
+    return;
+  }
   sendInput(gx, gy, true);
 }
 
@@ -229,6 +241,53 @@ brushIncrease.addEventListener('click', () => cycleBrush(1));
 document.getElementById('btn-clear')!.addEventListener('click', () => {
   worker.postMessage({ type: 'clear' } satisfies WorkerInput);
   canvasState = 'fresh';
+});
+
+// ─── Fun buttons: Explosion, Wind, Gravity ────────────────────
+const btnExplode = document.getElementById('btn-explode')!;
+const btnWind = document.getElementById('btn-wind')!;
+const btnGravity = document.getElementById('btn-gravity')!;
+
+btnExplode.addEventListener('click', () => {
+  explosionMode = !explosionMode;
+  btnExplode.classList.toggle('active', explosionMode);
+  if (explosionMode) {
+    // Deactivate tool selection visually
+    if (activeToolBtn) activeToolBtn.classList.remove('active');
+    statusTool.textContent = '💥 Explode';
+  } else {
+    selectTool(tool);
+  }
+});
+
+const windLabels = ['🌬️ Off', '🌬️ ←', '🌬️ →'];
+function cycleWind() {
+  const states: WindState[] = [0, 1, -1];
+  const idx = states.indexOf(windState);
+  const next = (idx + 1) % states.length;
+  windState = states[next];
+  worker.postMessage({ type: 'wind', direction: windState } satisfies WorkerInput);
+  btnWind.textContent = windLabels[next];
+}
+btnWind.addEventListener('click', cycleWind);
+
+btnGravity.addEventListener('click', () => {
+  gravityReversed = !gravityReversed;
+  const dir = gravityReversed ? -1 : 1;
+  worker.postMessage({ type: 'gravity', direction: dir } satisfies WorkerInput);
+  btnGravity.textContent = gravityReversed ? '🔄 ↑' : '🔄 ↓';
+});
+
+// Keyboard shortcuts for fun features
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'e' && !e.ctrlKey && !e.metaKey) {
+    btnExplode.click();
+    e.preventDefault();
+  }
+  if (e.key === 'w' && !e.ctrlKey && !e.metaKey) {
+    cycleWind();
+    e.preventDefault();
+  }
 });
 
 // ─── Save / Load buttons ───────────────────────────────────────

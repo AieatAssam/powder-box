@@ -457,9 +457,14 @@
 
       <div class="actions">
         <button class="action-btn generate" id="btn-generate" title="Generate random scene (N)">🎲 Scene</button>
-        <button class="action-btn" id="btn-save" title="Save canvas to .pbox file (Ctrl+S)">💾 Save</button>
-        <button class="action-btn" id="btn-load" title="Load a .pbox save file (Ctrl+O)">📂 Load</button>
+        <button class="action-btn" id="btn-save" title="Save canvas (Ctrl+S)">💾 Save</button>
+        <button class="action-btn" id="btn-load" title="Load canvas (Ctrl+O)">📂 Load</button>
         <input type="file" id="load-input" accept=".pbox" style="display:none">
+        <div class="separator"></div>
+        <button class="action-btn" id="btn-explode" title="Explosion tool (E)">💥</button>
+        <button class="action-btn" id="btn-wind" title="Toggle wind (W)">🌬️ Off</button>
+        <button class="action-btn" id="btn-gravity" title="Flip gravity">🔄 ↓</button>
+        <div class="separator"></div>
         <button class="action-btn record" id="btn-record" title="Record GIF (G)">🎬 GIF</button>
         <button class="action-btn clear" id="btn-clear" title="Clear all (C)">✕ Clear</button>
       </div>
@@ -470,8 +475,9 @@
       <kbd>1</kbd>–<kbd>9</kbd> tools 
       <kbd>0</kbd> eraser 
       <kbd>−</kbd>/<kbd>=</kbd> brush 
-      <kbd>N</kbd> new scene <kbd>←</kbd><kbd>→</kbd> cycle 
-      <kbd>G</kbd> record GIF 
+      <kbd>N</kbd> scene <kbd>←</kbd><kbd>→</kbd> cycle 
+      <kbd>E</kbd> explode <kbd>W</kbd> wind 
+      <kbd>G</kbd> GIF 
       <kbd>C</kbd> clear 
       <kbd>Space</kbd> pause 
       Drag to draw
