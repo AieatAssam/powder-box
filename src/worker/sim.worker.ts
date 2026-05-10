@@ -407,17 +407,34 @@ function tick() {
     }
   }
 
-  // Update cells bottom-to-top, alternating scan direction
+  // Scan in gravity direction so particles move into already-processed cells
+  // (prevents per-frame chain movement that looks instant)
   const rightward = (tickNum & 1) === 0;
 
-  for (let y = H - 1; y >= 0; y--) {
-    if (rightward) {
-      for (let x = 0; x < W; x++) {
-        processCell(x, y);
+  if (gravityDir >= 0) {
+    // Gravity downward: scan bottom-to-top
+    for (let y = H - 1; y >= 0; y--) {
+      if (rightward) {
+        for (let x = 0; x < W; x++) {
+          processCell(x, y);
+        }
+      } else {
+        for (let x = W - 1; x >= 0; x--) {
+          processCell(x, y);
+        }
       }
-    } else {
-      for (let x = W - 1; x >= 0; x--) {
-        processCell(x, y);
+    }
+  } else {
+    // Gravity upward: scan top-to-bottom
+    for (let y = 0; y < H; y++) {
+      if (rightward) {
+        for (let x = 0; x < W; x++) {
+          processCell(x, y);
+        }
+      } else {
+        for (let x = W - 1; x >= 0; x--) {
+          processCell(x, y);
+        }
       }
     }
   }
