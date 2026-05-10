@@ -186,9 +186,10 @@ function tickLiquid(x: number, y: number, spreadRate: number) {
     }
   }
 
-  // Spread sideways
+  // Spread sideways (consistent direction per cell to avoid flickering)
+  const liquidDir = ((x + y) & 1) ? 1 : -1;
   for (let attempt = 0; attempt < spreadRate; attempt++) {
-    const dir = ((x + y + attempt) & 1) ? 1 : -1;
+    const dir = (attempt & 1) ? -liquidDir : liquidDir;
     const tx = x + dir;
     if (inBounds(tx, y) && get(tx, y) === Element.EMPTY) {
       swap(x, y, tx, y);
@@ -206,9 +207,10 @@ function tickGas(x: number, y: number, spreadRate: number) {
     swap(x, y, x, y + dy);
     return;
   }
-  // Spread sideways
+  // Spread sideways (consistent direction per cell to avoid flickering)
+  const gasDir = ((x + y) & 1) ? 1 : -1;
   for (let attempt = 0; attempt < spreadRate; attempt++) {
-    const dir = ((x + y + attempt) & 1) ? 1 : -1;
+    const dir = (attempt & 1) ? -gasDir : gasDir;
     const tx = x + dir;
     if (inBounds(tx, y) && get(tx, y) === Element.EMPTY) {
       swap(x, y, tx, y);
