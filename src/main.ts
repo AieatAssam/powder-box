@@ -245,31 +245,57 @@ document.getElementById('btn-clear')!.addEventListener('click', () => {
   canvasState = 'fresh';
 });
 
-// ─── Mode indicator (follows mouse) ──────────────────────────
+// ─── Brush indicator (icon follows mouse near cursor) ─────────
+const brushIcon: Record<Tool, string> = {
+  [Tool.SAND]: '🟤',
+  [Tool.WATER]: '💧',
+  [Tool.FIRE]: '🔥',
+  [Tool.WALL]: '🧱',
+  [Tool.WOOD]: '🪵',
+  [Tool.OIL]: '🛢️',
+  [Tool.PLANT]: '🌿',
+  [Tool.LAVA]: '🌋',
+  [Tool.ACID]: '🧪',
+  [Tool.ERASER]: '🧹',
+  [Tool.EXPLOSIVE]: '💥',
+};
+
 const modeIndicator = document.getElementById('mode-indicator')!;
-function getModeIndicatorText(): string {
-  const parts: string[] = [];
-  if (gravityReversed) parts.push('🔄↑');
-  if (windState === 1) parts.push('🌬️→');
-  else if (windState === -1) parts.push('🌬️←');
-  else if (windState === 2) parts.push('🌬️🎲');
-  if (tool === Tool.EXPLOSIVE) parts.push('💥');
-  return parts.join(' ');
-}
 function updateModeIndicator(cx: number, cy: number) {
-  const text = getModeIndicatorText();
-  if (!text) {
+  const icon = brushIcon[tool] || '';
+  if (!icon) {
     modeIndicator.style.display = 'none';
     return;
   }
-  modeIndicator.textContent = text;
+  modeIndicator.textContent = icon;
   modeIndicator.style.display = 'block';
   modeIndicator.style.left = (cx + 16) + 'px';
   modeIndicator.style.top = (cy - 24) + 'px';
 }
 
-// Hide on mouse leave
+// Hide indicator on mouse leave
 canvas.addEventListener('mouseleave', () => { modeIndicator.style.display = 'none'; });
+
+// ─── Status bar mode indicators ──────────────────────────────
+const statusModes = document.createElement('span');
+statusModes.className = 'status-badge';
+statusModes.style.cssText = 'color:#7c5cbf;display:none;font-size:0.65rem;gap:2px';
+statusModes.textContent = '';
+document.querySelector('.status')?.appendChild(statusModes);
+
+function updateStatusModes() {
+  const parts: string[] = [];
+  if (gravityReversed) parts.push('🔄↑');
+  if (windState === 1) parts.push('🌬️→');
+  else if (windState === -1) parts.push('🌬️←');
+  else if (windState === 2) parts.push('🌬️🎲');
+  if (parts.length) {
+    statusModes.textContent = parts.join(' ');
+    statusModes.style.display = 'inline';
+  } else {
+    statusModes.style.display = 'none';
+  }
+}
 
 // ─── Fun buttons: Wind, Gravity ───────────────────────────────
 const btnWind = document.getElementById('btn-wind')!;
@@ -284,6 +310,7 @@ function cycleWind() {
   windState = windStates[next];
   worker.postMessage({ type: 'wind', direction: windState } satisfies WorkerInput);
   btnWind.textContent = windLabels[next];
+  updateStatusModes();
 }
 btnWind.addEventListener('click', cycleWind);
 
@@ -292,6 +319,7 @@ btnGravity.addEventListener('click', () => {
   const dir = gravityReversed ? -1 : 1;
   worker.postMessage({ type: 'gravity', direction: dir } satisfies WorkerInput);
   btnGravity.textContent = gravityReversed ? '🔄 ↑' : '🔄 ↓';
+  updateStatusModes();
 });
 
 // Keyboard shortcuts
