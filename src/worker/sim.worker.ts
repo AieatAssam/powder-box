@@ -37,6 +37,7 @@ const LAVA_LIFETIME = 180;      // 180 ticks before lava solidifies
 const SMOKE_LIFETIME = 35;      // ticks before smoke fades
 const STEAM_LIFETIME = 50;      // ticks before steam condenses
 const WOOD_BURN_TIME = 60;      // ticks for wood to burn before turning to fire
+const SAND_MELT_TIME = 25;      // ticks of fire exposure before sand turns to glass
 
 // ─── Probability constants (1/N chance per check) ───────────────
 const FIRE_SPREAD_CHANCE = 5;   // 1 in 5 chance per tick
@@ -304,6 +305,14 @@ function tickFire(x: number, y: number) {
     } else if (adjacent === Element.PLANT) {
       if (Math.random() < 1 / FIRE_IGNITE_CHANCE) {
         set(nx, ny, Element.FIRE, FIRE_LIFETIME);
+      }
+    } else if (adjacent === Element.SAND) {
+      // Fire gradually melts sand into glass
+      const sandLife = life[idx(nx, ny)];
+      if (sandLife < SAND_MELT_TIME) {
+        life[idx(nx, ny)] = sandLife + 1;
+      } else {
+        set(nx, ny, Element.GLASS);
       }
     } else if (adjacent === Element.WATER) {
       // Water extinguishes fire
@@ -671,14 +680,34 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
           const strength = Math.max(1, Math.round((er - dist) * 0.8));
           const nx = Math.round(x + (dx / dist) * strength + (Math.random() - 0.5) * 3);
           const ny = Math.round(y + (dy / dist) * strength + (Math.random() - 0.5) * 3);
-          if (inBounds(nx, ny) && grid[ny * W + nx] === Element.EMPTY) {
-            grid[ny * W + nx] = grid[cellIdx];
-            life[ny * W + nx] = life[cellIdx];
-            grid[cellIdx] = Element.EMPTY;
-            life[cellIdx] = 0;
+          if (inBounds(nx, ny)) {
+            const target = grid[ny * W + nx];
+            // Destroy walls and solids in the blast path
+            if (target !== Element.EMPTY && target !== Element.FIRE) {
+              const isSolid = SOLIDS.has(target as Element) || target === Element.WALL;
+              if (isSolid) {
+                // Wall destroyed — turn to empty, create smoke
+                grid[ny * W + nx] = Element.EMPTY;
+                life[ny * W + nx] = 0;
+                // Smoke debris from destroyed structure
+                for (let s = 0; s < 2; s++) {
+                  const sx = nx + Math.round((Math.random() - 0.5) * 3);
+                  const sy = ny + Math.round((Math.random() - 0.5) * 3);
+                  if (inBounds(sx, sy) && grid[sy * W + sx] === Element.EMPTY)
+                    grid[sy * W + sx] = Element.SMOKE, life[sy * W + sx] = 10 + Math.floor(Math.random() * 10);
+                }
+              }
+            }
+            // Move the original particle if target is now empty
+            if (grid[ny * W + nx] === Element.EMPTY) {
+              grid[ny * W + nx] = grid[cellIdx];
+              life[ny * W + nx] = life[cellIdx];
+              grid[cellIdx] = Element.EMPTY;
+              life[cellIdx] = 0;
+            }
           }
-          // Fire trail
-          if (Math.random() < 0.2) {
+          // Fire trail — more intense near centre
+          if (Math.random() < 0.3) {
             const fx = Math.max(0, Math.min(W - 1, x + Math.round((Math.random() - 0.5) * 4)));
             const fy = Math.max(0, Math.min(H - 1, y + Math.round((Math.random() - 0.5) * 4)));
             if (grid[fy * W + fx] === Element.EMPTY)
