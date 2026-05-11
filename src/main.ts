@@ -71,6 +71,9 @@ document.addEventListener('keydown', (e) => {
   }
   if (key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey) {
     worker.postMessage({ type: 'clear' } satisfies WorkerInput);
+    clearCanvas();
+    latestFrame = null;
+    canvasState = 'fresh';
     e.preventDefault();
   }
   if (key.toLowerCase() === 'g') {
@@ -242,6 +245,8 @@ brushIncrease.addEventListener('click', () => cycleBrush(1));
 // ─── Clear button ────────────────────────────────────────────────
 document.getElementById('btn-clear')!.addEventListener('click', () => {
   worker.postMessage({ type: 'clear' } satisfies WorkerInput);
+  clearCanvas();
+  latestFrame = null;
   canvasState = 'fresh';
 });
 
@@ -389,6 +394,27 @@ function randomSceneIndexExcluding(previous: number | null): number {
   return idx;
 }
 
+/** Clear the canvas visually (immediately, synchronous). */
+function clearCanvas() {
+  // Fill the displayed canvas with background gradient
+  for (let y = 0; y < GRID_H; y++) {
+    const t = y / (GRID_H - 1);
+    const bgR = 20 - t * 8;
+    const bgG = 15 + t * 10;
+    const bgB = 25 + t * 8;
+    for (let x = 0; x < GRID_W; x++) {
+      const pi = (y * GRID_W + x) * 4;
+      gridImgData.data[pi] = bgR;
+      gridImgData.data[pi + 1] = bgG;
+      gridImgData.data[pi + 2] = bgB;
+      gridImgData.data[pi + 3] = 255;
+    }
+  }
+  offCtx.putImageData(gridImgData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(offscreen, 0, 0, CANVAS_W, CANVAS_H);
+}
+
 function generateScene(sceneIndex?: number) {
   if (sceneGenerating) return; // debounce: ignore rapid clicks
   sceneGenerating = true;
@@ -404,6 +430,12 @@ function generateScene(sceneIndex?: number) {
   const canvasWrap = document.querySelector('.canvas-wrap')!;
   canvasWrap.classList.add('scene-transition');
   setTimeout(() => canvasWrap.classList.remove('scene-transition'), 350);
+
+  // ⭐ Immediately clear the canvas so user sees instant feedback,
+  // before the worker even starts its CPU-heavy scene generation.
+  worker.postMessage({ type: 'clear' } satisfies WorkerInput);
+  clearCanvas();
+  latestFrame = null;
 
   // Generate the scene in the worker (off the main thread)
   worker.postMessage({ type: 'generateScene', sceneIndex, seed } satisfies WorkerInput);

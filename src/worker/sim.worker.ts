@@ -589,24 +589,28 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
       break;
     }
     case 'generateScene': {
-      const buf = buildScenePlacement(msg.sceneIndex, msg.seed);
-      // Place cells from the generated buffer
-      const gView = new DataView(buf);
-      const gCount = buf.byteLength / 6;
-      grid.fill(0);
-      life.fill(0);
-      for (let i = 0; i < gCount; i++) {
-        const off = i * 6;
-        const x = gView.getUint16(off, true);
-        const y = gView.getUint16(off + 2, true);
-        const elem = gView.getUint8(off + 4);
-        const lifetime = gView.getUint8(off + 5);
-        if (inBounds(x, y)) {
-          grid[y * W + x] = elem;
-          life[y * W + x] = lifetime;
+      // Generate scene (may be CPU-heavy, runs in this worker thread)
+      try {
+        const buf = buildScenePlacement(msg.sceneIndex, msg.seed);
+        // Place cells into the already-cleared grid
+        const gView = new DataView(buf);
+        const gCount = buf.byteLength / 6;
+        for (let i = 0; i < gCount; i++) {
+          const off = i * 6;
+          const x = gView.getUint16(off, true);
+          const y = gView.getUint16(off + 2, true);
+          const elem = gView.getUint8(off + 4);
+          const lifetime = gView.getUint8(off + 5);
+          if (inBounds(x, y)) {
+            grid[y * W + x] = elem;
+            life[y * W + x] = lifetime;
+          }
         }
+      } catch (err) {
+        // If scene building throws, don't kill the worker silently
+        console.error('Scene generation failed:', err);
       }
-      // Render and post a frame so the main thread can continue
+      // Render and post frame
       renderPixels();
       const gOut: FrameMessage = { type: 'frame', pixels };
       self.postMessage(gOut, [pixels.buffer as ArrayBuffer]);
