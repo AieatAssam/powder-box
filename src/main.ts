@@ -27,6 +27,16 @@ const worker = new Worker(
   { type: 'module' },
 );
 
+// Expose worker error for debugging (checkable from console)
+worker.addEventListener('error', (e) => {
+  (window as any).__workerError = e.message + ' at ' + e.filename + ':' + e.lineno;
+  console.error('Worker error:', e.message, e.filename, e.lineno);
+});
+worker.addEventListener('messageerror', (e) => {
+  (window as any).__workerMsgError = String(e.data);
+  console.error('Worker message error:', e.data);
+});
+
 worker.postMessage({ type: 'init', width: GRID_W, height: GRID_H } satisfies WorkerInput);
 
 // ─── Input state ────────────────────────────────────────────────
