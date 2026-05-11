@@ -390,6 +390,9 @@ function randomSceneIndexExcluding(previous: number | null): number {
 }
 
 function generateScene(sceneIndex?: number) {
+  if (sceneGenerating) return; // debounce: ignore rapid clicks
+  sceneGenerating = true;
+
   const seed = Date.now() ^ (Math.random() * 0x7fffffff | 0);
   if (sceneIndex === undefined) {
     sceneIndex = randomSceneIndexExcluding(lastSceneIndex);
@@ -581,6 +584,7 @@ document.addEventListener('keydown', (e) => {
 let latestFrame: Uint8ClampedArray | null = null;
 let tickPending = false;
 let renderLoopRunning = false;
+let sceneGenerating = false; // debounce: ignore generate clicks while worker is busy
 
 function queueTick() {
   if (tickPending) return;
@@ -640,6 +644,7 @@ worker.onmessage = (e: MessageEvent<FrameMessage | StateSnapshotMessage>) => {
   // If we already have a pending frame, it gets replaced so we only
   // render the most recent one (drops intermediate frames at high tick rates).
   latestFrame = src;
+  sceneGenerating = false; // scene generation done, allow next click
 
   // Start rAF loop on first frame
   if (!renderLoopRunning) {

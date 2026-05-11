@@ -606,6 +606,15 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
           life[y * W + x] = lifetime;
         }
       }
+      // Render and post a frame so the main thread can continue
+      renderPixels();
+      const gOut: FrameMessage = { type: 'frame', pixels };
+      self.postMessage(gOut, [pixels.buffer as ArrayBuffer]);
+      pixels = new Uint8ClampedArray(W * H * 4);
+      for (let i = 0; i < pixels.length; i += 4) {
+        pixels[i] = 16; pixels[i + 1] = 18;
+        pixels[i + 2] = 28; pixels[i + 3] = 255;
+      }
       break;
     }
     case 'saveState': {
