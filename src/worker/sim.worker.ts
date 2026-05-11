@@ -8,6 +8,7 @@ import {
   PALETTE_FLAT, PALETTE_LEN,
   type WorkerInput, type FrameMessage, type StateSnapshotMessage,
 } from '../types';
+import { buildScenePlacement } from '../scenes';
 
 // ─── State owned by the worker ──────────────────────────────────
 let W = GRID_W;
@@ -583,6 +584,26 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
           const gi = y * W + x;
           grid[gi] = elem;
           life[gi] = lifetime;
+        }
+      }
+      break;
+    }
+    case 'generateScene': {
+      const buf = buildScenePlacement(msg.sceneIndex, msg.seed);
+      // Place cells from the generated buffer
+      const gView = new DataView(buf);
+      const gCount = buf.byteLength / 6;
+      grid.fill(0);
+      life.fill(0);
+      for (let i = 0; i < gCount; i++) {
+        const off = i * 6;
+        const x = gView.getUint16(off, true);
+        const y = gView.getUint16(off + 2, true);
+        const elem = gView.getUint8(off + 4);
+        const lifetime = gView.getUint8(off + 5);
+        if (inBounds(x, y)) {
+          grid[y * W + x] = elem;
+          life[y * W + x] = lifetime;
         }
       }
       break;

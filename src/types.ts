@@ -193,6 +193,12 @@ export interface GravityMessage {
   direction: number;
 }
 
+export interface GenerateSceneMessage {
+  type: 'generateScene';
+  sceneIndex: number;
+  seed: number;
+}
+
 export type WorkerInput =
   | InitMessage
   | InputMessage
@@ -203,7 +209,8 @@ export type WorkerInput =
   | LoadStateMessage
   | ExplodeMessage
   | WindMessage
-  | GravityMessage;
+  | GravityMessage
+  | GenerateSceneMessage;
 
 export interface FrameMessage {
   type: 'frame';
