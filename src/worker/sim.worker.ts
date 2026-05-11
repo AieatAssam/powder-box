@@ -515,14 +515,15 @@ function toolToElement(tool: Tool): Element | null {
 // ─── Pixel rendering ────────────────────────────────────────────
 function renderPixels() {
   for (let y = 0; y < H; y++) {
-    // Subtle gradient: deep purple-black at top → dark teal at bottom
+    const row = y * W;
     const t = y / (H - 1);
     const bgR = 20 - t * 8;
     const bgG = 15 + t * 10;
     const bgB = 25 + t * 8;
+
     for (let x = 0; x < W; x++) {
-      const pi = (y * W + x) * 4;
-      const elem = grid[y * W + x];
+      const pi = (row + x) * 4;
+      const elem = grid[row + x];
       if (elem === Element.EMPTY) {
         pixels[pi] = bgR;
         pixels[pi + 1] = bgG;

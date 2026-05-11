@@ -566,15 +566,52 @@ function updatePauseUI() {
 document.addEventListener('keydown', (e) => {
   if (e.key === ' ' || e.key === 'Space') {
     e.preventDefault();
+    const wasPaused = paused;
     paused = !paused;
     updatePauseUI();
+    // Resume ticking when unpaused
+    if (wasPaused && renderLoopRunning) queueTick();
   }
 });
+
+// ─── rAF-throttled render loop ──────────────────────────────────
+// Decouples rendering from worker tick rate. The worker runs
+// independently and only one tick is ever pending. At vsync (60fps),
+// we grab the latest frame and render it. This prevents flooding
+// the main thread when the worker processes ticks faster than
+// the display can refresh.
+let latestFrame: Uint8ClampedArray | null = null;
+let tickPending = false;
+let renderLoopRunning = false;
+
+function queueTick() {
+  if (tickPending) return;
+  tickPending = true;
+  worker.postMessage({ type: 'tick' } satisfies WorkerInput);
+}
+
+function renderTick() {
+  if (!latestFrame) return;
+  const src = latestFrame;
+  latestFrame = null;
+
+  gridImgData.data.set(src);
+  offCtx.putImageData(gridImgData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(offscreen, 0, 0, CANVAS_W, CANVAS_H);
+
+  // Request next tick only after rendering (backpressure)
+  if (!paused) queueTick();
+}
+
+function renderLoop(_time: number) {
+  if (!paused) renderTick();
+  requestAnimationFrame(renderLoop);
+}
 
 worker.onmessage = (e: MessageEvent<FrameMessage | StateSnapshotMessage>) => {
   const msg = e.data;
   if (msg.type === 'stateSnapshot') {
-    // Resolve pending save-to-file
     if (pendingSaveResolve) {
       pendingSaveResolve(msg.data);
       pendingSaveResolve = null;
@@ -584,6 +621,7 @@ worker.onmessage = (e: MessageEvent<FrameMessage | StateSnapshotMessage>) => {
   if (msg.type !== 'frame') return;
 
   const src = msg.pixels;
+  tickPending = false;
 
   // GIF recording: capture raw RGBA frame at grid resolution
   if (recording) {
@@ -600,15 +638,16 @@ worker.onmessage = (e: MessageEvent<FrameMessage | StateSnapshotMessage>) => {
     }
   }
 
-  if (paused) return;
+  // Store the latest frame for the rAF render loop
+  // If we already have a pending frame, it gets replaced so we only
+  // render the most recent one (drops intermediate frames at high tick rates).
+  latestFrame = src;
 
-  // GPU-accelerated scaling: draw grid-resolution pixels onto offscreen canvas,
-  // then let the GPU handle scaling via drawImage (much faster than CPU loop).
-  gridImgData.data.set(src);
-  offCtx.putImageData(gridImgData, 0, 0);
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(offscreen, 0, 0, CANVAS_W, CANVAS_H);
-  queueTick();
+  // Start rAF loop on first frame
+  if (!renderLoopRunning) {
+    renderLoopRunning = true;
+    requestAnimationFrame(renderLoop);
+  }
 };
 
 // ─── Save / Load ────────────────────────────────────────────────
@@ -696,12 +735,6 @@ function tryRestoreAutosave() {
     worker.postMessage({ type: 'loadState', data: payload }, [payload]);
     canvasState = 'userModified';
   } catch { /* corrupt autosave, ignore */ }
-}
-
-// ─── Simulation loop ────────────────────────────────────────────
-// Only send next tick after previous frame is received (avoids message queue buildup)
-function queueTick() {
-  worker.postMessage({ type: 'tick' } satisfies WorkerInput);
 }
 
 // Activate default tool
