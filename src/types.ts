@@ -197,6 +197,8 @@ export interface GenerateSceneMessage {
   type: 'generateScene';
   sceneIndex: number;
   seed: number;
+  /** Incrementing token to pair the scene frame with the request */
+  genToken: number;
 }
 
 export type WorkerInput =
@@ -216,6 +218,8 @@ export interface FrameMessage {
   type: 'frame';
   /** RGBA pixel buffer (transferable) */
   pixels: Uint8ClampedArray;
+  /** Token set on frames from generateScene, used to synchronize sceneCompletion flush */
+  sceneGenToken?: number;
 }
 
 export interface StateSnapshotMessage {

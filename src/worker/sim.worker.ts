@@ -610,9 +610,10 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
         // If scene building throws, don't kill the worker silently
         console.error('Scene generation failed:', err);
       }
-      // Render and post frame
+      // Render and post frame with genToken so the main thread knows
+      // this is the scene frame, not a stale tick frame.
       renderPixels();
-      const gOut: FrameMessage = { type: 'frame', pixels };
+      const gOut: FrameMessage = { type: 'frame', pixels, sceneGenToken: msg.genToken };
       self.postMessage(gOut, [pixels.buffer as ArrayBuffer]);
       pixels = new Uint8ClampedArray(W * H * 4);
       for (let i = 0; i < pixels.length; i += 4) {
