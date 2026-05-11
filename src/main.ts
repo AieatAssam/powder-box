@@ -775,4 +775,6 @@ function tryRestoreAutosave() {
 // Activate default tool
 selectTool(Tool.SAND);
 updateBrushDisplay();
-queueTick();
+
+// Start with a random scene instead of a blank canvas
+generateScene();
