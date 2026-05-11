@@ -63,11 +63,25 @@ function strokeCircle(out: CellSink, cx: number, cy: number, r: number, elem: nu
 }
 
 function line(out: CellSink, x1: number, y1: number, x2: number, y2: number, elem: number, life = 0) {
+  // Round inputs so Bresenham's integer-equality termination works reliably.
+  // Floating-point start coordinates skip past the integer endpoint
+  // and cause an infinite loop.
+  x1 = Math.round(x1); y1 = Math.round(y1);
+  x2 = Math.round(x2); y2 = Math.round(y2);
+  if (x1 === x2 && y1 === y2) {
+    if (x1 >= 0 && x1 < GRID_W && y1 >= 0 && y1 < GRID_H)
+      out.push(x1, y1, elem, life);
+    return;
+  }
   const dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
   const sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1;
   let err = dx - dy;
   let x = x1, y = y1;
+  // Safety cap: max 10x the Manhattan distance prevents runaway loops
+  const maxIter = (dx + dy + 1) * 10;
+  let iter = 0;
   while (true) {
+    if (iter++ > maxIter) break; // safety valve
     if (x >= 0 && x < GRID_W && y >= 0 && y < GRID_H)
       out.push(x, y, elem, life);
     if (x === x2 && y === y2) break;
@@ -714,7 +728,7 @@ const beach: SceneBuilder = (seed) => {
   // ── Palm trees with better fronds ──
   const treeCount = 2 + Math.floor(rng() * 3);
   for (let i = 0; i < treeCount; i++) {
-    const tx = 25 + rng() * (GRID_W - 50);
+    const tx = Math.round(25 + rng() * (GRID_W - 50));
     const ty = Math.floor(beachStart + 12 + rng() * (GRID_H - beachStart - 20));
     const trunkH = 5 + Math.floor(rng() * 5);
     // Curved trunk (coconut-palm style)
