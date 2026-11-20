@@ -69,6 +69,13 @@ class Canvas {
     }
   }
 
+  /** Current element at a position (EMPTY when unset or off the grid). */
+  get(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= W || y >= H) return Element.EMPTY;
+    const e = this.el[y * W + x];
+    return e === UNSET ? Element.EMPTY : e;
+  }
+
   /** Every cell that holds a non-empty element. */
   cells(): Cell[] {
     const out: Cell[] = [];
@@ -175,6 +182,69 @@ function jar(c: Canvas, x0: number, base: number, w: number, h: number, e: numbe
   c.rect(x0 + 2, base - 1 - fill, w - 4, fill, e);
 }
 
+/** Up to `n` buried pockets of a random element from `es`, placed only where the ground is solid all around. */
+function buried(c: Canvas, n: number, es: number[], yMin: number): void {
+  const solid = (x: number, y: number): boolean => {
+    const e = c.get(x, y);
+    return e === Element.STONE || e === Element.ASH || e === Element.SAND;
+  };
+  for (let t = 0, placed = 0; t < n * 12 && placed < n; t++) {
+    const r = ri(c, 2, 5), d = r + 3, x = ri(c, 10, W - 11), y = ri(c, yMin, H - 11);
+    if (![[0, 0], [-d, 0], [d, 0], [0, -d], [0, d], [-d, -d], [d, -d], [-d, d], [d, d]].every(([i, j]) => solid(x + i, y + j))) continue;
+    c.disc(x, y, r, es[ri(c, 0, es.length - 1)]);
+    placed++;
+  }
+}
+
+function cactus(c: Canvas, x: number, base: number, h: number): void {
+  c.rect(x, base - h, 2, h, Element.PLANT);
+  const a = base - Math.round(h * 0.55);
+  c.rect(x - 3, a, 3, 1, Element.PLANT);
+  c.rect(x - 3, a - 3, 1, 3, Element.PLANT);
+  c.rect(x + 2, a - 2, 3, 1, Element.PLANT);
+  c.rect(x + 4, a - 4, 1, 2, Element.PLANT);
+}
+
+/** A cabin of `w` x `h` wood with a stone roof and a doorway, standing on `base`. `smoke` adds a smoking chimney. */
+function hut(c: Canvas, x: number, base: number, w: number, h: number, smoke = false): void {
+  if (smoke) {
+    c.rect(x + w - 4, base - h - 5, 2, 3, Element.STONE);
+    c.set(x + w - 3, base - h - 6, Element.CLONE, Element.SMOKE);
+  }
+  c.rect(x, base - h, w, h, Element.WOOD);
+  c.rect(x + 1, base - h + 1, w - 2, h - 2, Element.EMPTY);
+  c.rect(x - 2, base - h - 2, w + 4, 2, Element.STONE);
+  c.rect(x + Math.floor(w / 2) - 1, base - 4, 2, 4, Element.EMPTY);
+}
+
+/** A 5x5 sealed glass lantern at (x, y), its centre an eternal flame. */
+function lantern(c: Canvas, x: number, y: number): void {
+  c.rect(x, y, 5, 5, Element.GLASS);
+  c.rect(x + 1, y + 1, 3, 3, Element.EMPTY);
+  c.set(x + 2, y + 2, Element.CLONE, Element.FIRE);
+}
+
+/** A wooden crate of `w` x `h` standing on `base`, packed with `inside`. */
+function crate(c: Canvas, x: number, base: number, w: number, h: number, inside: number): void {
+  c.rect(x, base - h, w, h, Element.WOOD);
+  c.rect(x + 1, base - h + 1, w - 2, h - 2, inside);
+}
+
+/** Scatter up to `n` fish through water in a box, keeping them at least 3 cells apart. */
+function fishIn(c: Canvas, x0: number, y0: number, x1: number, y1: number, n: number): void {
+  let placed = 0;
+  for (let t = 0; t < n * 40 && placed < n; t++) {
+    const x = ri(c, x0, x1), y = ri(c, y0, y1);
+    if (c.get(x, y) !== Element.WATER) continue;
+    let near = false;
+    for (let j = -2; j <= 2 && !near; j++)
+      for (let i = -2; i <= 2; i++) if (c.get(x + i, y + j) === Element.FISH) { near = true; break; }
+    if (near) continue;
+    c.set(x, y, Element.FISH);
+    placed++;
+  }
+}
+
 function hourglass(c: Canvas, cx: number, top: number, bot: number, half: number, e: number): void {
   const mid = (top + bot) / 2, span = (bot - top) / 2;
   for (let y = top; y <= bot; y++) {
@@ -209,6 +279,17 @@ const volcano = scene((c) => {
       const x = cx + side * ri(c, 92, 118);
       if (x > 5 && x < W - 5 && surf[x] < 171) tree(c, x, surf[x], ri(c, 14, 22));
     }
+  // A village of cabins on the lower slopes, and fish in the sea either side.
+  for (const x of [cx - 78, cx + 78]) if (surf[x] < 150) {
+    c.rect(x, surf[x], 12, 18, Element.STONE); // a level footing on the slope
+    hut(c, x, surf[x], 12, 9, true);
+  }
+  // Snow on the upper slopes, a blind lava tube ending just under one flank, and pockets in the rock.
+  for (let x = cx - 40; x <= cx + 40; x++) if (Math.abs(x - cx) > 15) c.rect(x, surf[x] - 2, 1, 2, Element.SNOW);
+  c.line(cx, 112, cx + (c.rng() < 0.5 ? -50 : 50), 120, Element.LAVA, 3);
+  buried(c, 7, [Element.GAS, Element.OIL, Element.WATER, Element.SAND], 110);
+  fishIn(c, 4, 172, 70, 192, 4);
+  fishIn(c, 250, 172, 316, 192, 4);
 });
 
 const waterfall = scene((c) => {
@@ -223,7 +304,22 @@ const waterfall = scene((c) => {
   c.rect(0, 40, 34, 5, Element.STONE);
   c.rect(28, 45, 6, 1, Element.CLONE, Element.WATER); // the spring, under a rock ledge
   drain(c, 306, 317, surf[310]);
-  for (const x of [8, 16, 200, 222, 246, 270, 290]) tree(c, x + ri(c, -3, 3), surf[x], ri(c, 16, 26));
+  for (const x of [8, 16, 200, 222, 278, 294]) tree(c, x + ri(c, -3, 3), surf[x], ri(c, 16, 26));
+  // Plunge pool with fish, a footbridge over it, and a cabin on the far bank.
+  const pool = Math.max(surf[123], surf[179]) + 1;
+  flood(c, surf, 124, 178, pool, Element.WATER);
+  fishIn(c, 126, pool + 1, 176, pool + 12, 5);
+  c.rect(130, pool - 6, 48, 2, Element.WOOD);
+  for (const x of [130, 176]) c.rect(x, pool - 6, 2, surf[x] - pool + 6, Element.WOOD);
+  hut(c, 240, surf[247], 14, 10, true);
+  // Reeds waiting on the river bank.
+  for (let n = 0; n < 16; n++) { const x = ri(c, 182, 236); c.set(x, surf[x] - 1, Element.SEED); }
+  // A sealed smugglers' cave inside the cliff: blast through the rock face to find it.
+  c.rect(72, 104, 34, 18, Element.EMPTY);
+  crate(c, 75, 122, 11, 8, Element.FIREWORK);
+  crate(c, 90, 122, 9, 7, Element.TNT);
+  lantern(c, 84, 105);
+  buried(c, 5, [Element.GAS, Element.OIL, Element.SAND], 165);
 });
 
 const frozenLake = scene((c) => {
@@ -234,6 +330,18 @@ const frozenLake = scene((c) => {
   flood(c, surf, 85, 235, level, Element.WATER);
   for (let x = 85; x <= 235; x++) if (surf[x] > level) c.rect(x, level, 1, Math.min(5, surf[x] - level), Element.ICE);
   c.disc(ri(c, 140, 180), 190, 7, Element.LAVA); // sealed under the lake bed, slowly melting its way up
+  fishIn(c, 90, level + 6, 230, level + 30, 9);
+  const hx = ri(c, 110, 130);
+  hut(c, hx, level, 16, 10, true); // a cabin on the ice, its lantern sealed inside
+  lantern(c, hx + 5, level - 9);
+  c.rect(hx + 24, level, 3, 5, Element.WATER); // fishing hole
+  const ix = ri(c, 185, 212); // igloo
+  for (let dy = -8; dy <= 0; dy++)
+    for (let dx = -8; dx <= 8; dx++) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= 64 && d2 > 30) c.set(ix + dx, level - 1 + dy, Element.ICE);
+    }
+  buried(c, 6, [Element.GAS, Element.OIL, Element.SAND], level + 50);
   for (let k = 0; k < 4; k++) c.set(30 + k * 80 + ri(c, -12, 12), 0, Element.CLONE, Element.SNOW);
   for (let x = 12; x < W - 8; x += ri(c, 10, 16)) if (x < 76 || x > 244) pine(c, x, surf[x], ri(c, 18, 30));
 });
@@ -245,6 +353,18 @@ const hourglassScene = scene((c) => {
   hourglass(c, 160, 14, 176, 46, Element.SAND);
   hourglass(c, 52, 96, 176, 22, fills[ri(c, 0, 4)]);
   hourglass(c, 268, 96, 176, 22, fills[ri(c, 0, 4)]);
+  // Specimen jars on top of the small timers: a fish bowl, a seed bed in ash that sprouts at once, and worse.
+  const flip = c.rng() < 0.5, a0 = flip ? 244 : 26, b0 = flip ? 26 : 244;
+  jar(c, a0, 92, 14, 20, Element.WATER, 12);
+  c.set(a0 + 6, 85, Element.FISH);
+  jar(c, a0 + 18, 92, 14, 20, Element.ASH, 7);
+  c.rect(a0 + 20, 83, 10, 1, Element.SEED);
+  jar(c, a0 + 36, 92, 14, 20, Element.GUNPOWDER, ri(c, 6, 14));
+  jar(c, b0, 92, 14, 20, Element.ACID, ri(c, 6, 12));
+  jar(c, b0 + 18, 92, 14, 20, Element.OIL, ri(c, 6, 14));
+  jar(c, b0 + 36, 92, 14, 20, Element.SNOW, ri(c, 6, 14));
+  c.rect(b0 + 20, 70, 10, 2, Element.TNT); // balanced on the rim of the oil jar
+  buried(c, 4, [Element.WATER, Element.GAS, Element.OIL], 186);
 });
 
 const powderKeg = scene((c) => {
@@ -269,6 +389,15 @@ const powderKeg = scene((c) => {
   // An eternal torch a short walk from the end of the fuse: the player has to carry the flame.
   c.rect(14, surf[15] - 12, 3, 12, Element.STONE);
   c.set(15, surf[15] - 13, Element.CLONE, Element.FIRE);
+  // TNT stacked on the fuse between the sheds, oil drums, a flag, a well and what is buried under the fort.
+  c.rect(163, 157, 10, 6, Element.TNT);
+  c.rect(162, 155, 12, 2, Element.WOOD);
+  for (const x of [228, 238]) jar(c, x, 162, 9, ri(c, 9, 13), Element.OIL, 6, Element.WALL);
+  c.rect(64, 106, 1, 13, Element.WOOD);
+  c.rect(65, 106, 7, 4, Element.PLANT);
+  jar(c, 24, surf[30] + 2, 13, 8, Element.WATER, 5, Element.STONE);
+  tree(c, 305, 165, ri(c, 14, 20));
+  buried(c, 7, [Element.GAS, Element.OIL, Element.GUNPOWDER, Element.TNT], 178);
 });
 
 const fireworksNight = scene((c) => {
@@ -284,11 +413,20 @@ const fireworksNight = scene((c) => {
       c.rect(mx - 4, top - 6, 9, 6, Element.WALL);
       c.rect(mx - 3, top - 6, 7, 5, Element.FIREWORK);
       c.rect(mx + 4, top - 2, len + 1, 1, Element.WOOD);
-      c.set(mx + 5 + len, top - 2, Element.CLONE, Element.FIRE);
+      // Every other wick is already lit. The rest wait for a stray spark from a neighbour's burst, or for you.
+      if (cups % 2 === 0) c.set(mx + 5 + len, top - 2, Element.CLONE, Element.FIRE);
       cups++;
+    } else if (w > 22) {
+      // Rooftops without a launcher get a water tank, a garden or a smoking chimney.
+      const r = c.rng();
+      if (r < 0.35) jar(c, x + 4, top - 1, 13, 9, Element.WATER, 6, Element.WALL);
+      else if (r < 0.7) c.rect(x + 2, top - 2, w - 4, 2, Element.PLANT);
+      else { c.rect(x + w - 7, top - 5, 3, 5, Element.STONE); c.set(x + w - 6, top - 6, Element.CLONE, Element.SMOKE); }
     }
+    if (c.rng() < 0.2) c.rect(x + 2, 173, w - 4, 3, Element.TNT); // demolition charges in the ground floor
     x += w + ri(c, 1, 4);
   }
+  c.rect(6, 187, W - 12, 3, Element.GAS); // the gas main under the street
   const mx = ri(c, 40, 280);
   c.disc(mx, 24, 11, Element.ICE); // crescent moon
   c.disc(mx + 6, 21, 10, Element.EMPTY);
@@ -309,7 +447,21 @@ const hangingGardens = scene((c) => {
     c.rect(x0 + 3, y - 3, w - 6, 3, Element.WATER);
     for (let n = 0; n < 9; n++) c.set(ri(c, x0 + 6, x0 + w - 7), y - 1, Element.SEED);
     for (let x = x0 + 4; x < x0 + w - 4; x += ri(c, 5, 12)) vine(c, x, y + 6, ri(c, 4, 16));
+    fishIn(c, x0 + 4, y - 3, x0 + w - 5, y - 2, 3);
   }
+  // A temple on the heights with a brazier that never goes out, and seed beds in ash at its foot.
+  for (const x of [286, 313]) c.rect(x, 53, 3, surf[x] - 53, Element.STONE);
+  c.rect(238, 50, 80, 3, Element.STONE);
+  c.rect(240, 28, 76, 3, Element.STONE);
+  for (let k = 0; k < 10; k++) c.rect(244 + k * 4, 27 - k, 68 - k * 8, 1, Element.STONE);
+  for (const x of [244, 262, 290, 308]) c.rect(x, 31, 3, 19, Element.STONE);
+  c.rect(273, 47, 7, 3, Element.STONE);
+  c.set(276, 46, Element.CLONE, Element.FIRE);
+  for (let x = 36; x < 68; x++) {
+    c.set(x, surf[x] - 1, Element.ASH);
+    if (c.rng() < 0.3) c.set(x, surf[x] - 2, Element.SEED);
+  }
+  buried(c, 4, [Element.WATER, Element.SAND, Element.GAS], 184);
   drain(c, 100, 112, surf[106]);
   for (const x of [14, 26, 296, 308]) tree(c, x, surf[x], ri(c, 18, 28));
 });
@@ -335,6 +487,7 @@ const gasMine = scene((c) => {
   }
   jar(c, 255, lower(255) + 7, 14, 9, Element.GUNPOWDER, 6, Element.WOOD);
   c.disc(110, 110, 8, Element.WATER);
+  fishIn(c, 102, 103, 118, 117, 2);
   c.disc(ri(c, 200, 280), 182, 9, Element.LAVA);
   // Headframe over the shaft, and a lantern well away from it.
   c.line(48, surf[48], 60, 8, Element.WOOD, 2);
@@ -342,6 +495,15 @@ const gasMine = scene((c) => {
   c.rect(52, 18, 17, 2, Element.WOOD);
   c.rect(288, surf[289] - 10, 3, 10, Element.STONE);
   c.set(289, surf[289] - 11, Element.CLONE, Element.FIRE);
+  // Pit village on the surface; below, a TNT store, an ore cart, sealed lamps, a flooded gallery and ore pockets.
+  hut(c, 150, surf[156], 14, 9, true);
+  for (const x of [108, 128, 190, 214, 238]) tree(c, x + ri(c, -4, 4), surf[x], ri(c, 12, 18));
+  crate(c, 33, lower(36) + 8, 9, 8, Element.TNT);
+  crate(c, 163, lower(167) + 8, 10, 6, Element.SAND);
+  for (const x of [130, 200]) lantern(c, x, upper(x) - 6);
+  c.rect(58, 166, 118, 9, Element.WATER);
+  fishIn(c, 60, 167, 174, 173, 5);
+  buried(c, 9, [Element.SAND, Element.GAS, Element.OIL, Element.WATER, Element.GLASS], 92);
 });
 
 const alchemistLab = scene((c) => {
@@ -364,6 +526,16 @@ const alchemistLab = scene((c) => {
   c.rect(54, 178, 13, 8, Element.STONE);
   c.set(60, 177, Element.CLONE, Element.FIRE);
   c.rect(48, 154, 25, 3, Element.STONE);
+  // On the floor: a fish tank, a terrarium of seeds in ash, a glass cabinet of TNT. Sealed lamps under the top shelf.
+  jar(c, 84, 185, 36, 20, Element.WATER, 15);
+  fishIn(c, 86, 169, 117, 183, 4);
+  jar(c, 128, 185, 30, 26, Element.ASH, 6);
+  c.rect(131, 177, 24, 1, Element.SEED);
+  c.rect(262, 160, 46, 26, Element.GLASS);
+  c.rect(264, 162, 42, 22, Element.EMPTY);
+  c.rect(266, 184 - ri(c, 8, 14), 38, 14, Element.TNT);
+  c.rect(262, 184, 46, 2, Element.GLASS);
+  for (const x of [68, 188]) lantern(c, x, 81);
 });
 
 const desertOasis = scene((c) => {
@@ -373,7 +545,9 @@ const desertOasis = scene((c) => {
     c.rect(x, surf[x], 1, H - surf[x], Element.SAND);
     c.rect(x, 182 + Math.round(4 * Math.sin(x / 21)), 1, 20, Element.STONE);
   }
-  flood(c, surf, 118, 202, Math.max(surf[117], surf[203]) + 5, Element.WATER);
+  const lvl = Math.max(surf[117], surf[203]) + 5;
+  flood(c, surf, 118, 202, lvl, Element.WATER);
+  fishIn(c, 122, lvl + 1, 198, lvl + 9, 4);
   for (const x of [108, 114, 207, 216]) palm(c, x, surf[x], ri(c, 22, 34), ri(c, -8, 8));
   for (let n = 0; n < 10; n++) { const x = c.rng() < 0.5 ? ri(c, 112, 119) : ri(c, 201, 208); c.set(x, surf[x] - 1, Element.SEED); }
   // A stepped pyramid with a sealed treasure chamber, and an oil field with a gas cap under the dunes.
@@ -381,6 +555,22 @@ const desertOasis = scene((c) => {
   for (let k = 0; k < 9; k++) c.rect(px - 36 + k * 4, base - (k + 1) * 5, 72 - k * 8, 5, Element.STONE);
   c.rect(px - 9, base - 14, 18, 10, Element.EMPTY);
   c.rect(px - 7, base - 8, 14, 4, Element.FIREWORK);
+  c.rect(px + 3, base - 8, 4, 4, Element.TNT);
+  c.rect(px - 6, base - 31, 12, 8, Element.GLASS); // an acid trap in a glass-lined cell above the treasure
+  c.rect(px - 4, base - 29, 8, 4, Element.ACID);
+  // Cacti on the dunes, a tent, and a sun of molten glass you can crack.
+  for (let n = 0; n < 9; n++) {
+    const x = ri(c, 8, W - 9);
+    if ((x > 98 && x < 224) || Math.abs(x - px) < 42) continue;
+    cactus(c, x, surf[x], ri(c, 7, 13));
+  }
+  const tx = ri(c, 70, 84);
+  c.line(tx - 8, surf[tx - 8], tx, surf[tx] - 11, Element.WOOD);
+  c.line(tx + 8, surf[tx + 8], tx, surf[tx] - 11, Element.WOOD);
+  const sx = ri(c, 36, 120);
+  c.disc(sx, 22, 9, Element.GLASS);
+  c.disc(sx, 22, 7, Element.LAVA);
+  buried(c, 6, [Element.WATER, Element.GAS, Element.GLASS], 160);
   const ox = ri(c, 40, 70);
   c.disc(ox, 166, 15, Element.STONE);
   c.disc(ox, 166, 12, Element.OIL);
@@ -408,8 +598,20 @@ const crystalCave = scene((c) => {
   }
   const level = Math.max(floor[117], floor[201]) + 4;
   flood(c, floor, 118, 200, level, Element.WATER);
+  fishIn(c, 120, level + 1, 190, level + 10, 7);
   drain(c, 196, 198, level - 2);
-  for (const x of [140, 172]) c.set(x, ceil[x], Element.CLONE, Element.WATER);
+  c.set(140, ceil[140], Element.CLONE, Element.WATER);
+  c.set(172, ceil[172], Element.CLONE, Element.SNOW); // snow sifting through a crack, melting on the lake
+  // An explorers' camp, a seed bed in ash, and crystal and gas pockets in the rock.
+  crate(c, 22, floor[26], 9, 7, Element.TNT);
+  c.rect(36, ceil[36], 1, floor[36] - ceil[36], Element.WOOD);
+  c.rect(39, ceil[39], 1, floor[39] - ceil[39], Element.WOOD);
+  for (let y = ceil[37] + 4; y < floor[37]; y += 5) c.rect(37, y, 2, 1, Element.WOOD);
+  for (let x = 80; x < 106; x++) {
+    c.set(x, floor[x] - 1, Element.ASH);
+    if (c.rng() < 0.3) c.set(x, floor[x] - 2, Element.SEED);
+  }
+  buried(c, 12, [Element.GAS, Element.GLASS, Element.ICE, Element.OIL, Element.LAVA], 4);
   flood(c, floor, 258, 306, Math.max(floor[257], floor[307]) + 3, Element.LAVA);
   jar(c, 46, floor[60] + 3, 28, 14, Element.ACID, 9);
   for (let x = 10; x < 110; x += ri(c, 3, 7)) vine(c, x, ceil[x], ri(c, 2, 9));
@@ -438,6 +640,21 @@ const oilRig = scene((c) => {
   c.set(260, 56, Element.CLONE, Element.GAS);
   c.set(262, 57, Element.CLONE, Element.FIRE);
   c.rect(ri(c, 10, 60), 105, ri(c, 20, 40), 1, Element.OIL);
+  fishIn(c, 6, 110, 310, 140, 14);
+  // A supply boat with a cargo of fireworks, a wreck on the seabed, and more pockets under it.
+  const bx = ri(c, 264, 286);
+  c.rect(bx, 103, 26, 1, Element.WOOD);
+  c.rect(bx + 2, 104, 22, 3, Element.WOOD);
+  c.rect(bx + 15, 96, 8, 7, Element.WOOD);
+  c.rect(bx + 16, 97, 6, 5, Element.EMPTY);
+  c.rect(bx + 4, 100, 7, 3, Element.FIREWORK);
+  for (const x of [bx + 3, bx + 11]) c.rect(x, 99, 1, 4, Element.WOOD);
+  const wx = ri(c, 24, 60);
+  c.line(wx, bed[wx] - 1, wx + 26, bed[wx + 26] - 7, Element.WOOD, 2);
+  c.rect(wx + 13, bed[wx + 13] - 20, 1, 16, Element.WOOD);
+  c.rect(wx + 6, bed[wx + 6] - 3, 5, 2, Element.GLASS);
+  buried(c, 5, [Element.OIL, Element.GAS, Element.LAVA], 162);
+  crate(c, 94, 88, 10, 8, Element.TNT); // a crate of TNT on the rig's lee side
 });
 
 // ─── Registry ───────────────────────────────────────────────────
@@ -449,18 +666,18 @@ export interface SceneInfo {
 }
 
 export const SCENES: SceneInfo[] = [
-  { name: 'Volcano', description: 'The crater never stops welling up: dam the lava, or let it reach the sea.', generate: volcano },
-  { name: 'Waterfall Canyon', description: 'A spring-fed lake spills over the cliff; block the river and see where it goes.', generate: waterfall },
-  { name: 'Frozen Lake', description: 'Snow falls on thick ice while something hot stirs under the lake bed.', generate: frozenLake },
-  { name: 'Hourglass', description: 'Three glass timers are running; crack one open or flip gravity.', generate: hourglassScene },
-  { name: 'Powder Keg', description: 'Carry a flame from the torch to the fuse and stand well back.', generate: powderKeg },
-  { name: 'Fireworks Night', description: 'Wicks of different lengths are already burning on the rooftops.', generate: fireworksNight },
-  { name: 'Hanging Gardens', description: 'Water steps down the terraces and wakes the seeds sleeping in them.', generate: hangingGardens },
-  { name: 'Gas Mine', description: 'Gas has pooled under the gallery roofs, and the timbers are very dry.', generate: gasMine },
-  { name: "Alchemist's Lab", description: 'Every flask holds something different; break the glass and mix them.', generate: alchemistLab },
-  { name: 'Desert Oasis', description: 'Palms drink at the pool, and the pyramid is hiding something.', generate: desertOasis },
-  { name: 'Crystal Cave', description: 'A dripping cavern of ice and glass, lit by a lava pool.', generate: crystalCave },
-  { name: 'Oil Rig', description: 'The drill has stopped just short of the reservoir; finish the job.', generate: oilRig },
+  { name: 'Volcano', description: 'The crater never stops welling up, a lava tube waits under one flank, and the cabins below are in the way.', generate: volcano },
+  { name: 'Waterfall Canyon', description: 'A spring-fed lake spills over the cliff, and something is sealed inside the rock behind the falls.', generate: waterfall },
+  { name: 'Frozen Lake', description: 'Fish circle under thick ice while snow falls and something hot stirs below the lake bed.', generate: frozenLake },
+  { name: 'Hourglass', description: 'Three glass timers are running under a shelf of jars; crack one open or flip gravity.', generate: hourglassScene },
+  { name: 'Powder Keg', description: 'Carry a flame from the torch to the fuse, then stand well back from the TNT.', generate: powderKeg },
+  { name: 'Fireworks Night', description: 'Half the rooftop wicks are already burning, the rest are yours to light, and a gas main runs under the street.', generate: fireworksNight },
+  { name: 'Hanging Gardens', description: 'Water steps down the terraces past fish and vines, under a temple whose fire never goes out.', generate: hangingGardens },
+  { name: 'Gas Mine', description: 'Gas has pooled under the gallery roofs, the timbers are dry, and someone left TNT at the bottom.', generate: gasMine },
+  { name: "Alchemist's Lab", description: 'Every flask holds something different, so break the glass and mix them, cabinet of TNT included.', generate: alchemistLab },
+  { name: 'Desert Oasis', description: 'Palms drink at the pool, the pyramid hides a trap over its treasure, and the sun will crack.', generate: desertOasis },
+  { name: 'Crystal Cave', description: 'A dripping cavern of ice and glass lit by a lava pool, with an old camp by the ladder.', generate: crystalCave },
+  { name: 'Oil Rig', description: 'The drill has stopped just short of the reservoir, so finish the job and mind the flare.', generate: oilRig },
 ];
 
 /**

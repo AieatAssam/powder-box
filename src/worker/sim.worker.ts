@@ -30,7 +30,7 @@ ctx.onmessage = (e: MessageEvent<WorkerInput>) => {
       break;
     }
     case 'paint':
-      sim.paint(m.x0, m.y0, m.x1, m.y1, m.element, m.radius);
+      sim.paint(m.x0, m.y0, m.x1, m.y1, m.element, m.radius, m.emit);
       break;
     case 'explode':
       sim.explode(m.x, m.y, m.radius);

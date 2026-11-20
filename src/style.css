@@ -36,7 +36,7 @@ kbd {
 /* ─── Layout ─── */
 .app {
   display: grid;
-  grid-template-columns: 18rem minmax(0, 1fr);
+  grid-template-columns: 21rem minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas: "head head" "rail play";
   height: 100dvh;
@@ -149,7 +149,7 @@ kbd {
   color: var(--color-muted);
 }
 
-.tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2xs); }
+.tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2xs); }
 
 .tool {
   display: flex;
@@ -178,7 +178,7 @@ kbd {
 .swatch {
   display: block;
   width: 100%;
-  height: 28px;
+  height: 22px;
   border-radius: 2px;
 }
 .swatch.glyph {
@@ -197,7 +197,8 @@ kbd {
   stroke-linejoin: round;
 }
 
-.tool-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+/* The name may use the tile's own padding: "Gunpowder" has to fit a quarter of the rail. */
+.tool-name { margin-inline: calc(-1 * var(--space-2xs)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 
 /* ─── Play area ─── */
 .play {
@@ -264,9 +265,9 @@ kbd {
 
 /* ─── Control deck ─── */
 .transport { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; }
-@media (min-width: 1100px) { .transport { flex-wrap: nowrap; } }
 
-.cluster { display: flex; align-items: center; gap: var(--space-xs); }
+/* Clusters never squeeze: when the row is short the readout wraps to its own line. */
+.cluster { display: flex; flex: none; align-items: center; gap: var(--space-xs); }
 .cluster + .cluster { margin-left: var(--space-sm); }
 
 .seg { gap: 0; overflow: hidden; border: 2px solid var(--color-rule); border-radius: var(--radius-card); }
