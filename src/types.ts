@@ -27,8 +27,10 @@ export const enum Element {
   SPARK = 21,
   CLONE = 22,
   VOID = 23,
+  TNT = 24,
+  FISH = 25,
 }
-export const ELEMENT_COUNT = 24;
+export const ELEMENT_COUNT = 26;
 
 // ─── Material table ─────────────────────────────────────────────
 export const enum Kind { EMPTY = 0, POWDER = 1, LIQUID = 2, GAS = 3, SOLID = 4, ENERGY = 5 }
@@ -73,13 +75,15 @@ def(Element.FIREWORK, { name: 'Firework', kind: Kind.POWDER, density: 55, flamma
 def(Element.SPARK, { name: 'Spark', kind: Kind.ENERGY, density: 1, flammability: 0, colors: [[255, 240, 180]], glow: true });
 def(Element.CLONE, { name: 'Clone', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[224, 176, 40], [240, 196, 60], [204, 156, 28]] });
 def(Element.VOID, { name: 'Void', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[34, 8, 48], [46, 12, 64], [26, 4, 38]] });
+def(Element.TNT, { name: 'TNT', kind: Kind.SOLID, density: 255, flammability: 1, colors: [[196, 48, 40], [176, 40, 34], [212, 60, 50]] });
+def(Element.FISH, { name: 'Fish', kind: Kind.POWDER, density: 30, flammability: 0, colors: [[255, 150, 40]] });
 
 /** Typed-array lookups for hot loops (indexed by Element). */
 export const KIND = Uint8Array.from(MATERIALS, m => m.kind);
 export const DENSITY = Uint8Array.from(MATERIALS, m => m.density);
 
 // ─── Tools (the UI palette is built from this table) ────────────
-export type ToolGroup = 'Powders' | 'Liquids' | 'Solids' | 'Gases' | 'Energy' | 'Tools';
+export type ToolGroup = 'Powders' | 'Liquids and gases' | 'Solids' | 'Life' | 'Energy' | 'Sources and tools';
 export type ToolAction = 'paint' | 'explode' | 'lightning';
 
 export interface ToolDef {
@@ -93,36 +97,48 @@ export interface ToolDef {
   element: Element;
   /** One-line description of what makes it fun. */
   hint: string;
+  /** Source tools paint a Clone cell that already pours this element. */
+  emit?: Element;
 }
 
 const t = (id: string, name: string, key: string, group: ToolGroup, element: Element, hint: string, action: ToolAction = 'paint'): ToolDef =>
   ({ id, name, key, group, action, element, hint });
 
+const src = (id: string, name: string, key: string, emit: Element, hint: string): ToolDef =>
+  ({ ...t(id, name, key, 'Sources and tools', Element.CLONE, hint), emit });
+
 export const TOOLS: ToolDef[] = [
   t('sand', 'Sand', '1', 'Powders', Element.SAND, 'Piles up. Fire fuses it into glass.'),
-  t('snow', 'Snow', 'o', 'Powders', Element.SNOW, 'Drifts on the wind, melts near heat.'),
-  t('gunpowder', 'Gunpowder', 'p', 'Powders', Element.GUNPOWDER, 'One spark and it all goes up.'),
-  t('ash', 'Ash', 'a', 'Powders', Element.ASH, 'What fire leaves behind. Fertile.'),
-  t('seed', 'Seed', 'd', 'Powders', Element.SEED, 'Sprouts a vine when it lands near water.'),
-  t('firework', 'Firework', 'f', 'Powders', Element.FIREWORK, 'Light it: it launches and bursts in colour.'),
-  t('water', 'Water', '2', 'Liquids', Element.WATER, 'Flows, freezes, boils, feeds plants.'),
-  t('oil', 'Oil', '6', 'Liquids', Element.OIL, 'Floats on water and burns fiercely.'),
-  t('lava', 'Lava', '8', 'Liquids', Element.LAVA, 'Ignites everything, cools into stone.'),
-  t('acid', 'Acid', '9', 'Liquids', Element.ACID, 'Eats through almost anything.'),
-  t('wall', 'Wall', '4', 'Solids', Element.WALL, 'Immovable. Only explosions break it.'),
-  t('wood', 'Wood', '5', 'Solids', Element.WOOD, 'Burns slowly down to ash.'),
-  t('plant', 'Plant', '7', 'Solids', Element.PLANT, 'Drinks water and grows.'),
-  t('stone', 'Stone', 'q', 'Solids', Element.STONE, 'Cooled lava. Melts again if it gets hot enough.'),
+  t('snow', 'Snow', 'o', 'Powders', Element.SNOW, 'Drifts on the wind, melts near heat, slowly vanishes in the open.'),
+  t('gunpowder', 'Gunpowder', 'p', 'Powders', Element.GUNPOWDER, 'Flashes at a spark and sometimes explodes.'),
+  t('ash', 'Ash', 'a', 'Powders', Element.ASH, 'Left by fire. Seeds sprout in it without water and grow twice as tall.'),
+  t('water', 'Water', '2', 'Liquids and gases', Element.WATER, 'Flows, freezes, boils, feeds plants.'),
+  t('oil', 'Oil', '6', 'Liquids and gases', Element.OIL, 'Floats on water and burns fiercely.'),
+  t('lava', 'Lava', '8', 'Liquids and gases', Element.LAVA, 'Sets fire to anything that burns, boils water, cools into stone.'),
+  t('acid', 'Acid', '9', 'Liquids and gases', Element.ACID, 'Eats everything except glass and wall. Water dilutes it.'),
+  t('wall', 'Wall', '4', 'Solids', Element.WALL, 'Immovable. Only the heart of an explosion breaks it.'),
+  t('wood', 'Wood', '5', 'Solids', Element.WOOD, 'Burns slowly down to ash. Water puts it out.'),
+  t('stone', 'Stone', 'q', 'Solids', Element.STONE, 'Cooled lava. Slowly melts again where lava touches it.'),
   t('ice', 'Ice', 'i', 'Solids', Element.ICE, 'Freezes water it touches, melts near heat.'),
-  t('glass', 'Glass', 'l', 'Solids', Element.GLASS, 'Acid-proof container.'),
-  t('gas', 'Gas', 'm', 'Gases', Element.GAS, 'Invisible danger: rises, pools, explodes.'),
-  t('steam', 'Steam', 't', 'Gases', Element.STEAM, 'Rises, cools, rains back down.'),
+  t('glass', 'Glass', 'l', 'Solids', Element.GLASS, 'Holds acid and lava. Explosions shatter it.'),
+  t('tnt', 'TNT', 'x', 'Solids', Element.TNT, 'A block that blows a big hole when fire reaches it. Sets off its neighbours.'),
+  t('gas', 'Gas', 'm', 'Liquids and gases', Element.GAS, 'Rises, collects under ceilings, goes up at one spark.'),
+  t('steam', 'Steam', 't', 'Liquids and gases', Element.STEAM, 'Rises, cools, rains back down.'),
+  t('seed', 'Seed', 'd', 'Life', Element.SEED, 'Sprouts a vine when it lands near water or on ash.'),
+  t('plant', 'Plant', '7', 'Life', Element.PLANT, 'Drinks the water it touches and grows taller. Burns fast.'),
+  t('fish', 'Fish', 'h', 'Life', Element.FISH, 'Swims in water, eats seeds to breed, flops and dies on dry land.'),
   t('fire', 'Fire', '3', 'Energy', Element.FIRE, 'Spreads to anything that burns.'),
-  t('explode', 'Bomb', 'e', 'Energy', Element.EMPTY, 'Click to detonate. Shockwave throws debris.', 'explode'),
-  t('lightning', 'Lightning', 'z', 'Energy', Element.EMPTY, 'Strikes down from the sky.', 'lightning'),
-  t('clone', 'Clone', 'k', 'Tools', Element.CLONE, 'Endlessly copies the first thing that touches it.'),
-  t('void', 'Void', 'v', 'Tools', Element.VOID, 'Swallows whatever touches it.'),
-  t('eraser', 'Eraser', '0', 'Tools', Element.EMPTY, 'Remove anything.'),
+  t('firework', 'Firework', 'f', 'Energy', Element.FIREWORK, 'Light it: it launches and bursts in colour.'),
+  t('explode', 'Bomb', 'e', 'Energy', Element.EMPTY, 'Click to detonate. The blast throws loose material outward.', 'explode'),
+  t('lightning', 'Lightning', 'z', 'Energy', Element.EMPTY, 'Strikes from the sky. Fuses sand to glass where it lands.', 'lightning'),
+  src('spring', 'Spring', 'j', Element.WATER, 'Pours water forever.'),
+  src('vent', 'Vent', 'u', Element.LAVA, 'Pours lava forever.'),
+  src('jet', 'Gas jet', 'y', Element.GAS, 'Leaks gas forever. Keep sparks away, or do not.'),
+  src('torch', 'Torch', 'b', Element.FIRE, 'A flame that never goes out.'),
+  src('cloud', 'Cloud', 's', Element.SNOW, 'Snows forever.'),
+  t('clone', 'Clone', 'k', 'Sources and tools', Element.CLONE, 'A source for anything: pours the first material that touches it.'),
+  t('void', 'Void', 'v', 'Sources and tools', Element.VOID, 'A drain: swallows whatever touches it.'),
+  t('eraser', 'Eraser', '0', 'Sources and tools', Element.EMPTY, 'Remove anything.'),
 ];
 
 export const BRUSH_SIZES = [1, 2, 3, 5, 8, 14] as const;
@@ -149,7 +165,7 @@ export type WorkerInput =
   /** Advance `steps` simulation ticks (0 = just re-render, used while paused) and reply with a frame. */
   | { type: 'tick'; steps: number }
   /** Paint a brush stroke from (x0,y0) to (x1,y1), interpolated so fast drags leave no gaps. */
-  | { type: 'paint'; x0: number; y0: number; x1: number; y1: number; element: Element; radius: number }
+  | { type: 'paint'; x0: number; y0: number; x1: number; y1: number; element: Element; radius: number; emit?: Element }
   | { type: 'explode'; x: number; y: number; radius: number }
   | { type: 'lightning'; x: number; y: number }
   | { type: 'clear' }

@@ -7,7 +7,7 @@ import { KIND, DENSITY, MATERIALS, GRID_W, GRID_H, ELEMENT_COUNT, SAVE_MAGIC, SA
 // vitest transform, so the engine uses these. Keep them in sync with types.ts.
 const E_EMPTY = 0, E_SAND = 1, E_WATER = 2, E_FIRE = 3, E_WALL = 4, E_WOOD = 5, E_OIL = 6, E_PLANT = 7,
   E_LAVA = 8, E_STEAM = 9, E_SMOKE = 10, E_ACID = 11, E_GLASS = 12, E_STONE = 13, E_ICE = 14, E_SNOW = 15,
-  E_GUNPOWDER = 16, E_GAS = 17, E_ASH = 18, E_SEED = 19, E_FIREWORK = 20, E_SPARK = 21, E_CLONE = 22, E_VOID = 23;
+  E_GUNPOWDER = 16, E_GAS = 17, E_ASH = 18, E_SEED = 19, E_FIREWORK = 20, E_SPARK = 21, E_CLONE = 22, E_VOID = 23, E_TNT = 24, E_FISH = 25;
 const K_EMPTY = 0, K_POWDER = 1, K_LIQUID = 2, K_GAS = 3, K_SOLID = 4, K_ENERGY = 5;
 const KD = KIND, DEN = DENSITY;
 
@@ -72,6 +72,7 @@ export class Sim {
   private depth: Uint8Array; // render scratch: liquid cells seen so far in each column
   private cur = 1;           // stamp value for this tick, cycles 1..255 so 0 never matches
   private eff = 0;           // effective wind for this tick
+  private emit = 0;          // life byte for Clone cells painted by the current stroke
   private glowBuf: Uint16Array;
   private hash: Uint32Array;
   private rng: () => number;
@@ -118,10 +119,12 @@ export class Sim {
     }
   }
 
-  paint(x0: number, y0: number, x1: number, y1: number, element: number, radius: number): void {
+  /** `emit` (optional) is the element a painted Clone cell starts out pouring. */
+  paint(x0: number, y0: number, x1: number, y1: number, element: number, radius: number, emit = 0): void {
     if (!(Number.isFinite(x0) && Number.isFinite(y0) && Number.isFinite(x1) && Number.isFinite(y1) && Number.isFinite(radius))) return;
     if (!(element >= 0 && element < ELEMENT_COUNT)) return;
     const e = element | 0;
+    this.emit = e === E_CLONE && emit > 0 && emit < ELEMENT_COUNT && emit !== E_CLONE ? emit | 0 : 0;
     const r = toInt(radius, 0, 64);
     // Clamp endpoints so the stroke stays bounded; discs that reach the grid still stamp.
     let x = toInt(x0, -r - 1, this.w + r), y = toInt(y0, -r - 1, this.h + r);
@@ -154,6 +157,7 @@ export class Sim {
         const d2 = dx * dx + dy * dy;
         if (d2 > R2) continue;
         const j = yy * w + xx, n = grid[j];
+        if (n === E_TNT) { if (life[j] === 0) life[j] = this.ri(2, 8); continue; } // chain reaction
         if (d2 <= inner) {
           // Inner blast: everything goes, some of it burns.
           if (n === E_VOID || n === E_CLONE) continue;
@@ -352,6 +356,9 @@ export class Sim {
               R = SPARK_PAL[pi] * f; G = SPARK_PAL[pi + 1] * f; B = SPARK_PAL[pi + 2] * f;
               break;
             }
+            case E_TNT:
+              if (l > 0 && (t & 2)) { R = 255; G = 240; B = 200; }
+              break;
             case E_CLONE:
               if (l > 0 && l < ELEMENT_COUNT) {
                 const sb = l * 12;
@@ -496,7 +503,10 @@ export class Sim {
     const holeRow = hr >= 0 && hr < this.h;
     const dir = this.rng() < 0.5 ? -1 : 1;
     let best = -1, hole = false;
-    for (let s = 1; s <= dist; s++) {
+    // A liquid looks four times further than it can slide in a tick, and heads for a hole it can see:
+    // without that, a gently sloping surface finds no hole in reach and a lake fed at one end stays tilted.
+    const look = KD[e] === K_LIQUID && !splash ? dist * 4 : dist;
+    for (let s = 1; s <= look; s++) {
       const xx = x + dir * s;
       if (xx < 0 || xx >= w) break;
       const n = grid[y * w + xx];
@@ -505,7 +515,7 @@ export class Sim {
         if (s === 1 && KD[n] === K_LIQUID && KD[e] === K_LIQUID && DEN[n] < DEN[e]) best = y * w + xx;
         break;
       }
-      best = y * w + xx;
+      if (s <= dist) best = y * w + xx;
       if (holeRow && grid[hr * w + xx] === 0) { hole = true; break; }
     }
     if (best < 0) return false;
@@ -583,6 +593,8 @@ export class Sim {
       case E_SPARK: this.spark(i, x, y); break;
       case E_CLONE: this.clone(i, x, y); break;
       case E_VOID: this.voidCell(i, x, y); break;
+      case E_TNT: this.tnt(i, x, y); break;
+      case E_FISH: this.fish(i, x, y); break;
       default: break; // WALL and GLASS are inert
     }
   }
@@ -610,17 +622,24 @@ export class Sim {
   private snow(i: number, x: number, y: number): void {
     const m = this.nb(x, y);
     if ((m & (B_HOT | B_STEAM)) || ((m & B_WATER) && this.rng() < 1 / 40)) { this.put(i, E_WATER, 0); return; }
+    // Snow open to the sky slowly sublimates, so a snow cloud settles into a blanket instead of burying the world.
+    if (this.rng() < 1 / 3000) {
+      const uy = y - this.gravity;
+      if (uy >= 0 && uy < this.h && this.grid[uy * this.w + x] === 0) { this.put(i, E_EMPTY, 0); return; }
+    }
     this.powder(i, x, y, E_SNOW);
   }
 
   private seed(i: number, x: number, y: number): void {
     const g = this.gravity, w = this.w;
     const yb = y + g;
-    let resting = yb < 0 || yb >= this.h;
+    let resting = yb < 0 || yb >= this.h, below = 0;
     if (!resting) {
-      const below = this.grid[yb * w + x];
+      below = this.grid[yb * w + x];
       resting = below !== 0 && KD[below] !== K_LIQUID && KD[below] !== K_GAS;
     }
+    // Ash is fertile: a seed on ash roots into it with no water and grows about twice as tall.
+    if (below === E_ASH) { this.put(yb * w + x, E_PLANT, 0); this.put(i, E_PLANT, this.ri(35, 60)); return; }
     if (resting && this.waterNear(x, y)) { this.put(i, E_PLANT, this.ri(10, 30)); return; }
     this.powder(i, x, y, E_SEED);
   }
@@ -734,6 +753,7 @@ export class Sim {
         if (this.rng() < 0.2) this.explode(j % this.w, (j / this.w) | 0, 4);
         break;
       case E_FIREWORK: this.life[j] = this.ri(25, 45); break;
+      case E_TNT: if (this.life[j] === 0) this.life[j] = this.ri(10, 20); break;
       default: break;
     }
   }
@@ -770,10 +790,19 @@ export class Sim {
   private plant(i: number, x: number, y: number): void {
     const l = this.life[i], grid = this.grid, w = this.w;
     if (l === 0) {
+      // A plant with room above it drinks a neighbouring water cell and puts on a few cells of growth.
+      // (It used to turn the water itself into plant, which choked every lake it touched.)
+      const uy = y - this.gravity;
+      if (uy < 0 || uy >= this.h) return;
+      const up = grid[uy * w + x];
+      if (up !== 0 && up !== E_WATER) return;
       for (let k = 0; k < 4; k++) {
         const j = this.nIdx(x, y, k);
-        // Only grow into water that is not already crowded by plant: tendrils, not a solid blob.
-        if (j >= 0 && grid[j] === E_WATER && this.rng() < 1 / 12 && this.countAround(j, E_PLANT) <= 2) this.place(j, E_PLANT);
+        if (j >= 0 && grid[j] === E_WATER && this.rng() < 1 / 30) {
+          this.put(j, E_EMPTY, 0);
+          this.life[i] = this.ri(3, 8);
+          return;
+        }
       }
       return;
     }
@@ -882,9 +911,57 @@ export class Sim {
       }
       return;
     }
-    if (this.rng() >= 0.5) return;
+    if (this.rng() >= (src === E_SNOW ? 0.05 : 0.5)) return; // snow falls as flakes, not as an avalanche
     const j = this.nIdx(x, y, this.ri(0, 7));
     if (j >= 0 && this.grid[j] === 0) this.place(j, src);
+  }
+
+  /** Lit TNT (life > 0) counts down, then blows. */
+  private tnt(i: number, x: number, y: number): void {
+    const l = this.life[i];
+    if (l === 0) return;
+    if (l > 1) { this.life[i] = l - 1; return; }
+    this.put(i, E_EMPTY, 0);
+    this.explode(x, y, 9);
+  }
+
+  /** life bit 7 = heading (set: right), bits 0..6 = ticks spent out of water. */
+  private fish(i: number, x: number, y: number): void {
+    const grid = this.grid, w = this.w, l = this.life[i];
+    if (this.nb(x, y) & B_HOT) { this.place(i, E_ASH); return; }
+    let wet = false;
+    for (let k = 0; k < 4; k++) {
+      const j = this.nIdx(x, y, k);
+      if (j < 0) continue;
+      const n = grid[j];
+      if (n === E_WATER) wet = true;
+      else if (n === E_SEED) { // eat it; a fed fish spawns another in open water
+        this.put(j, E_WATER, 0);
+        this.life[j] = 0;
+        const s = this.nIdx(x, y, this.ri(0, 7));
+        if (s >= 0 && grid[s] === E_WATER && this.countAround(i, E_FISH) < 2) this.put(s, E_FISH, this.rng() < 0.5 ? 128 : 0);
+        return;
+      }
+    }
+    if (!wet) {
+      const air = (l & 127) + 1;
+      if (air > 120) { this.put(i, E_EMPTY, 0); return; }
+      this.life[i] = (l & 128) | air;
+      if (this.rng() < 0.08) { // flop
+        const j = this.nIdx(x, y, this.rng() < 0.5 ? 4 : 5);
+        if (j >= 0 && grid[j] === 0) { this.move(i, j); return; }
+      }
+      this.powder(i, x, y, E_FISH);
+      return;
+    }
+    let head = l & 128;
+    this.life[i] = head;
+    if (this.rng() < 0.45) return;
+    const r = this.rng();
+    const dx = r < 0.7 ? (head ? 1 : -1) : 0, dy = r < 0.7 ? 0 : r < 0.85 ? -1 : 1;
+    const nx = x + dx, ny = y + dy;
+    if (nx >= 0 && nx < w && ny >= 0 && ny < this.h && grid[ny * w + nx] === E_WATER) { this.move(i, ny * w + nx); return; }
+    if (dx !== 0) { head ^= 128; this.life[i] = head; }
   }
 
   private voidCell(i: number, x: number, y: number): void {
@@ -915,13 +992,16 @@ export class Sim {
     if (e === E_EMPTY) { this.grid[j] = 0; this.life[j] = 0; this.vel[j] = 0; return; }
     const cur = this.grid[j];
     if (e === E_FIRE && FLAM[cur] > 0) { this.ignite(j, cur); return; } // a flame brush lights what it touches
-    if (KD[e] === K_SOLID) {
+    if (e === E_FISH) {
+      if (cur !== E_WATER && cur !== 0) return;
+      if (r > 0 && this.rng() >= 0.06) return; // a shoal, not a block of fish
+    } else if (KD[e] === K_SOLID) {
       if (KD[cur] === K_SOLID) return;
     } else if (cur !== 0 || (r > 0 && this.rng() >= 0.6)) {
       return; // non-solids only fill empty cells, and only most of a stamp unless radius 0
     }
     this.grid[j] = e;
-    this.life[j] = this.defLife(e);
+    this.life[j] = this.emit || this.defLife(e);
     this.vel[j] = 0;
   }
 }

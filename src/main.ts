@@ -129,7 +129,7 @@ function cellAt(e: PointerEvent | WheelEvent): Cell {
 function paintBetween(from: Cell, to: Cell): void {
   send({
     type: 'paint', x0: from.x, y0: from.y, x1: to.x, y1: to.y,
-    element: state.tool.element, radius: BRUSH_SIZES[state.sizeIndex] - 1,
+    element: state.tool.element, radius: BRUSH_SIZES[state.sizeIndex] - 1, emit: state.tool.emit,
   });
 }
 
@@ -472,8 +472,10 @@ function swatch(tool: ToolDef): string {
   if (GLYPHS[tool.id]) {
     return `<span class="swatch glyph"><svg viewBox="0 0 24 24" aria-hidden="true">${GLYPHS[tool.id]}</svg></span>`;
   }
-  const [c] = MATERIALS[tool.element].colors;
-  return `<span class="swatch" style="background:rgb(${c})" aria-hidden="true"></span>`;
+  const [c] = MATERIALS[tool.emit ?? tool.element].colors;
+  // Sources show what they pour, framed in the Clone colour.
+  const ring = tool.emit ? `;box-shadow:inset 0 0 0 3px rgb(${MATERIALS[tool.element].colors[0]})` : '';
+  return `<span class="swatch" style="background:rgb(${c})${ring}" aria-hidden="true"></span>`;
 }
 
 function toolButton(tool: ToolDef): HTMLButtonElement {

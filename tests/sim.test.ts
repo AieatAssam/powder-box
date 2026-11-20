@@ -444,3 +444,74 @@ describe('fire brush', () => {
     expect(s.life[19 * 20 + 5]).toBeGreaterThan(0);
   });
 });
+
+describe('sources, TNT, fish and ash', () => {
+  it('a painted spring pours water without being touched', () => {
+    const s = mk();
+    s.paint(20, 5, 20, 5, Element.CLONE, 0, Element.WATER);
+    run(s, 100);
+    expect(s.count(Element.WATER)).toBeGreaterThan(10);
+    expect(s.count(Element.CLONE)).toBe(1);
+  });
+
+  it('a seed on ash sprouts with no water and consumes the ash under it', () => {
+    const s = mk();
+    set(s, 20, 39, Element.ASH);
+    set(s, 20, 38, Element.SEED);
+    run(s, 300);
+    expect(s.count(Element.WATER)).toBe(0);
+    expect(s.count(Element.ASH)).toBe(0);
+    expect(s.count(Element.PLANT)).toBeGreaterThan(20);
+  });
+
+  it('a seed on bare ground with no water stays a seed', () => {
+    const s = mk();
+    set(s, 20, 39, Element.SEED);
+    run(s, 300);
+    expect(s.count(Element.PLANT)).toBe(0);
+  });
+
+  it('TNT lit by fire blows through a wall and sets off the block beside it', () => {
+    const s = mk();
+    floorWall(s, 0, 39, 30);
+    set(s, 10, 29, Element.TNT);
+    set(s, 16, 29, Element.TNT);
+    set(s, 10, 28, Element.FIRE, 30);
+    run(s, 80);
+    expect(s.count(Element.TNT)).toBe(0);
+    expect(get(s, 10, 30)).not.toBe(Element.WALL);
+    expect(get(s, 16, 30)).not.toBe(Element.WALL);
+  });
+
+  it('unlit TNT does nothing', () => {
+    const s = mk();
+    set(s, 10, 39, Element.TNT);
+    run(s, 200);
+    expect(get(s, 10, 39)).toBe(Element.TNT);
+  });
+
+  it('fish live and move in water, and die on dry land', () => {
+    const s = mk();
+    for (let y = 30; y < 40; y++) for (let x = 0; x < 40; x++) set(s, x, y, Element.WATER);
+    set(s, 20, 35, Element.FISH);
+    run(s, 400);
+    expect(s.count(Element.FISH)).toBe(1);
+    expect(where(s, Element.FISH)[0]).not.toEqual([20, 35]);
+    expect(s.count(Element.WATER)).toBe(399);
+
+    const dry = mk();
+    set(dry, 20, 39, Element.FISH);
+    run(dry, 200);
+    expect(dry.count(Element.FISH)).toBe(0);
+  });
+
+  it('a fish that eats a seed breeds', () => {
+    const s = mk();
+    for (let y = 30; y < 40; y++) for (let x = 0; x < 40; x++) set(s, x, y, Element.WATER);
+    set(s, 20, 35, Element.FISH);
+    set(s, 21, 35, Element.SEED);
+    run(s, 50);
+    expect(s.count(Element.SEED)).toBe(0);
+    expect(s.count(Element.FISH)).toBe(2);
+  });
+});

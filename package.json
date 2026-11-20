@@ -2,7 +2,7 @@
   "name": "powderbox",
   "private": true,
   "version": "1.0.0",
-  "description": "Falling-sand physics sandbox for the browser: 23 materials, 12 generated scenes, no runtime dependencies.",
+  "description": "Falling-sand physics sandbox for the browser: 25 materials, 12 generated scenes, no runtime dependencies.",
   "homepage": "https://aieatassam.github.io/powder-box/",
   "repository": {
     "type": "git",

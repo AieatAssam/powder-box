@@ -2,7 +2,7 @@
 
 # PowderBox
 
-A falling-sand physics sandbox that runs entirely in the browser. Pour, burn, freeze, grow and blow up 23 materials across 12 hand-built scenes. No install, no account, no runtime dependencies.
+A falling-sand physics sandbox that runs entirely in the browser. Pour, burn, freeze, grow and blow up 25 materials across 12 hand-built scenes. No install, no account, no runtime dependencies.
 
 ![The PowderBox interface](docs/screenshot.png)
 
@@ -45,18 +45,21 @@ Every scene is generated from a seed, so "New scene" gives a fresh variation eac
 
 | Group | Materials |
 | --- | --- |
-| Powders | Sand, Snow, Gunpowder, Ash, Seed, Firework |
-| Liquids | Water, Oil, Lava, Acid |
-| Solids | Wall, Wood, Plant, Stone, Ice, Glass |
-| Gases | Gas, Steam (smoke is produced by burning) |
-| Energy | Fire, Bomb, Lightning |
-| Tools | Clone (copies what it touches, forever), Void (deletes what touches it), Eraser |
+| Powders | Sand, Snow, Gunpowder, Ash |
+| Liquids and gases | Water, Oil, Lava, Acid, Gas, Steam (smoke is produced by burning) |
+| Solids | Wall, Wood, Stone, Ice, Glass, TNT |
+| Life | Seed, Plant, Fish |
+| Energy | Fire, Firework, Bomb, Lightning |
+| Sources | Spring (water), Vent (lava), Gas jet, Torch (fire), Cloud (snow): each pours its material forever |
+| Tools | Clone (a source for whatever touches it first), Void (a drain), Eraser |
 
 Some of the interactions worth trying:
 
 - Fire fuses sand into glass, burns wood to ash and sets oil, gas, plants and seeds alight.
 - Lava cools into stone in thin streams, boils water into steam and stays molten in a pool.
-- Seeds that land near water sprout into plants. Plants drink water to grow.
+- Seeds that land near water sprout into plants, and plants drink the water they touch to grow taller. A seed that lands on ash roots into it with no water at all and grows about twice as tall, so a burnt forest can be replanted.
+- Fish swim in any water, eat seeds that fall in and breed when fed. Out of water they flop about and die; heat cooks them.
+- TNT blows a large hole when fire, lava or a spark reaches it, and one block sets off the next.
 - Water freezes next to ice. Snow melts next to anything hot.
 - Gunpowder flashes and sometimes explodes. Fireworks launch from the top of the stack and burst in colour.
 - Acid eats almost everything except glass and wall.
