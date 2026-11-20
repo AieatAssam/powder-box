@@ -28,18 +28,20 @@ Every scene is generated from a seed, so "New scene" gives a fresh variation eac
 
 | Scene | What is going on |
 | --- | --- |
-| Volcano | The crater keeps welling up and lava runs down both flanks to the sea. |
-| Waterfall Canyon | A spring-fed lake spills over a cliff into a river. |
-| Frozen Lake | Snow falls on thick ice while something hot stirs below. |
-| Hourglass | Three glass timers are running. Crack one or flip gravity. |
-| Powder Keg | A torch, a fuse and three sheds of gunpowder. |
-| Fireworks Night | Wicks of different lengths burn on the rooftops. |
-| Hanging Gardens | Terraces of vines fed by a spring. |
-| Gas Mine | Pockets of gas in a tunnel system, one flare at the surface. |
-| Alchemist's Lab | Flasks and jars of everything. Break the glass and mix. |
-| Desert Oasis | Dunes, palms, a pool and a pyramid with something inside. |
-| Crystal Cave | Ice, acid, water and lava under one roof. |
-| Oil Rig | A platform over the sea with a flare stack and a reservoir below. |
+| Volcano | The crater never stops welling up, a lava tube waits under one flank, and the cabins below are in the way. |
+| Waterfall Canyon | A spring-fed lake spills over the cliff, and something is sealed inside the rock behind the falls. |
+| Frozen Lake | Fish circle under thick ice while snow falls and something hot stirs below the lake bed. |
+| Hourglass | Three glass timers are running under a shelf of jars. Crack one open or flip gravity. |
+| Powder Keg | Carry a flame from the torch to the fuse, then stand well back from the TNT. |
+| Fireworks Night | Half the rooftop wicks are already burning, the rest are yours to light, and a gas main runs under the street. |
+| Hanging Gardens | Water steps down the terraces past fish and vines, under a temple whose fire never goes out. |
+| Gas Mine | Gas has pooled under the gallery roofs, the timbers are dry, and someone left TNT at the bottom. |
+| Alchemist's Lab | Every flask holds something different, so break the glass and mix them, cabinet of TNT included. |
+| Desert Oasis | Palms drink at the pool, the pyramid hides a trap over its treasure, and the sun will crack. |
+| Crystal Cave | A dripping cavern of ice and glass lit by a lava pool, with an old camp by the ladder. |
+| Oil Rig | The drill has stopped just short of the reservoir, so finish the job and mind the flare. |
+
+Most scenes also hide pockets of gas, oil or water in the ground. Dig, and you may find one.
 
 ## Materials
 
