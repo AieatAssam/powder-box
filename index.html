@@ -2,546 +2,122 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>PowderBox — Particle Sandbox</title>
-    <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      :root {
-        --bg: #0d0d17;
-        --surface: #161625;
-        --surface2: #1e1e30;
-        --border: #2a2a3e;
-        --text: #e0e0e8;
-        --text2: #999;
-        --accent: #f7c948;
-        --accent-glow: rgba(247,201,72,0.2);
-      }
-      html, body { height: 100%; overflow: hidden; }
-      body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 0.4rem;
-        gap: 0.3rem;
-        user-select: none;
-        -webkit-user-select: none;
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      /* ─── Main layout ─── */
-      .layout {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        max-width: 972px;
-        flex: 1;
-        min-height: 0;
-        gap: 0.3rem;
-      }
-
-      /* ─── Header ─── */
-      header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 0.15rem;
-        gap: 0.5rem;
-        flex-shrink: 0;
-      }
-      .logo {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-      .logo-icon {
-        font-size: 1.5rem;
-        line-height: 1;
-      }
-      h1 {
-        font-size: 1.2rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #ff6b35, #f7c948, #4ecdc4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        letter-spacing: -0.02em;
-        white-space: nowrap;
-      }
-      h1 small {
-        -webkit-text-fill-color: var(--text2);
-        font-weight: 400;
-        font-size: 0.65rem;
-        margin-left: 0.3rem;
-      }
-      .status {
-        font-size: 0.75rem;
-        color: var(--text2);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-      }
-      .status-badge {
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 0.15rem 0.45rem;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-      }
-      .recording-badge {
-        color: #ff4444;
-        animation: pulse 0.8s ease-in-out infinite;
-      }
-      @keyframes pulse { 50% { opacity: 0.4; } }
-
-      /* ─── Canvas ─── */
-      .canvas-wrap {
-        flex: 1;
-        min-height: 0;
-        border-radius: 10px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        overflow: hidden;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .canvas-wrap canvas {
-        display: block;
-        max-width: 100%;
-        max-height: 100%;
-        cursor: crosshair;
-        image-rendering: pixelated;
-        touch-action: none;
-        aspect-ratio: 960 / 600;
-      }
-      .canvas-overlay {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        border-radius: 10px;
-        box-shadow: inset 0 0 60px rgba(0,0,0,0.3);
-      }
-
-      /* ─── Toolbar ─── */
-      .toolbar {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        flex-shrink: 0;
-        width: 100%;
-        padding: 0.3rem 0.4rem;
-        background: var(--surface);
-        border-radius: 8px;
-        border: 1px solid var(--border);
-      }
-      .toolbar-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-        align-items: center;
-        flex: 1;
-        min-width: 0;
-      }
-      .tool-btn {
-        height: 38px;
-        border: 2px solid transparent;
-        border-radius: 8px;
-        cursor: pointer;
-        position: relative;
-        transition: all 0.1s;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 1.1rem;
-        background: var(--surface2);
-        flex-shrink: 0;
-        padding: 0 8px;
-        min-width: 38px;
-      }
-      .tool-btn:active { transform: scale(0.92); }
-      .tool-btn.active {
-        border-color: var(--accent);
-        box-shadow: 0 0 10px var(--accent-glow);
-        background: #2a2a3e;
-      }
-      .swatch {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 20px;
-        height: 20px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        line-height: 1;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
-        text-shadow: 0 0 3px rgba(0,0,0,0.6);
-      }
-      .eraser-swatch {
-        background: transparent !important;
-        border: 1px dashed var(--text2);
-        color: var(--text2);
-        font-size: 0.7rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: none;
-        text-shadow: none;
-      }
-      .tool-label {
-        font-size: 0.6rem;
-        color: var(--text2);
-        white-space: nowrap;
-        font-weight: 500;
-        letter-spacing: 0.02em;
-      }
-      .tool-shortcut {
-        position: absolute;
-        top: -2px; right: -2px;
-        font-size: 0.5rem;
-        color: var(--text2);
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 3px;
-        padding: 0 2px;
-        line-height: 1.2;
-        pointer-events: none;
-      }
-
-      .tool-label {
-        display: none;
-      }
-
-      .separator {
-        width: 1px; height: 30px;
-        background: var(--border);
-        flex-shrink: 0;
-        margin: 0 0.2rem;
-      }
-
-      /* Brush control */
-      .brush-group {
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-        flex-shrink: 0;
-        padding: 0 0.2rem;
-      }
-      .brush-group label {
-        font-size: 0.7rem;
-        color: var(--text2);
-      }
-      .brush-group button {
-        width: 26px; height: 26px;
-        border: 1px solid var(--border);
-        border-radius: 5px;
-        background: var(--surface2);
-        color: var(--text);
-        font-size: 0.9rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .brush-group button:active { background: #333; }
-      .brush-count {
-        min-width: 22px;
-        text-align: center;
-        font-variant-numeric: tabular-nums;
-        font-weight: 600;
-        font-size: 0.85rem;
-      }
-
-      /* Action buttons */
-      .actions-bar {
-        display: flex;
-        gap: 0.2rem;
-        justify-content: center;
-        flex-wrap: wrap;
-        padding-top: 0.2rem;
-        border-top: 1px solid var(--border);
-      }
-      .actions-sep {
-        width: 1px;
-        background: var(--border);
-        align-self: stretch;
-        margin: 0 0.15rem;
-      }
-      .action-btn {
-        padding: 0.3rem 0.6rem;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--surface2);
-        color: var(--text);
-        cursor: pointer;
-        font-size: 0.75rem;
-        transition: all 0.1s;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-      }
-      .action-btn:active { transform: scale(0.95); }
-      .action-btn.record { color: #ff6b6b; }
-      .action-btn.record.active { background: #4a2020; border-color: #ff6b6b; }
-      .action-btn.clear { color: #e88; }
-      .action-btn.generate { 
-        background: linear-gradient(135deg, #2a1a3e, #1e2a3e);
-        border-color: #7c5cbf;
-        color: #c8a8ff;
-        box-shadow: 0 0 6px rgba(124,92,191,0.2);
-        transition: all 0.15s;
-      }
-      .action-btn.generate:hover { 
-        border-color: #a07cff; 
-        background: linear-gradient(135deg, #3a2a4e, #2e3a4e);
-        box-shadow: 0 0 12px rgba(124,92,191,0.4);
-      }
-      .action-btn.generate:active { 
-        transform: scale(0.92);
-      }
-
-      /* ─── Scene name toast ─── */
-      .scene-toast {
-        position: absolute;
-        bottom: 8px; left: 8px;
-        color: rgba(255,255,255,0.85);
-        font-size: 0.68rem;
-        font-weight: 500;
-        letter-spacing: 0.03em;
-        pointer-events: none;
-        text-shadow: 0 1px 4px rgba(0,0,0,0.9);
-        opacity: 0;
-        transition: opacity 0.6s ease;
-        z-index: 5;
-        background: rgba(0,0,0,0.3);
-        padding: 3px 8px;
-        border-radius: 4px;
-        backdrop-filter: blur(2px);
-      }
-      .scene-toast.visible { opacity: 1; }
-
-      /* ─── Scene transition animation ─── */
-      @keyframes sceneFlash {
-        0% { opacity: 1; }
-        20% { opacity: 0.2; filter: brightness(2); }
-        40% { opacity: 0.4; }
-        100% { opacity: 1; filter: brightness(1); }
-      }
-      .canvas-wrap.scene-transition {
-        animation: sceneFlash 0.35s ease-out;
-      }
-
-      /* ─── Confirmation modal ─── */
-      .confirm-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.6);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 100;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.25s;
-      }
-      .confirm-overlay.visible {
-        opacity: 1;
-        pointer-events: all;
-      }
-      .confirm-box {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.5rem;
-        max-width: 360px;
-        text-align: center;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-      }
-      .confirm-box h3 {
-        font-size: 1rem;
-        margin-bottom: 0.5rem;
-        color: var(--accent);
-      }
-      .confirm-box p {
-        font-size: 0.8rem;
-        color: var(--text2);
-        margin-bottom: 1rem;
-        line-height: 1.4;
-      }
-      .confirm-btns {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: center;
-      }
-      .confirm-btns button {
-        padding: 0.4rem 1rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        cursor: pointer;
-        font-size: 0.8rem;
-        transition: all 0.1s;
-      }
-      .confirm-btns .confirm-yes {
-        background: linear-gradient(135deg, #7c5cbf, #5c3c9f);
-        color: white;
-        border-color: #7c5cbf;
-      }
-      .confirm-btns .confirm-yes:hover { background: linear-gradient(135deg, #8c6ccf, #6c4caf); }
-      .confirm-btns .confirm-no {
-        background: var(--surface2);
-        color: var(--text);
-      }
-      .confirm-btns .confirm-no:hover { background: #333; }
-
-      /* ─── Legend / Shortcuts ─── */
-      .legend {
-        font-size: 0.6rem;
-        color: var(--text2);
-        text-align: center;
-        line-height: 1.4;
-        flex-shrink: 0;
-      }
-      .legend kbd {
-        display: inline-block;
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: 3px;
-        padding: 0 4px;
-        font-family: inherit;
-        font-size: 0.6rem;
-        color: var(--text);
-      }
-
-      /* ─── Mobile tweaks ─── */
-      @media (max-width: 700px) {
-        body { padding: 0.2rem; gap: 0.15rem; }
-        .layout { gap: 0.15rem; }
-        header { padding: 0.1rem 0; }
-        h1 { font-size: 0.85rem; }
-        h1 small { display: none; }
-        .logo-icon { font-size: 1.1rem; }
-        .status { font-size: 0.6rem; gap: 0.2rem; }
-        .status-badge { padding: 0.1rem 0.3rem; }
-        .toolbar { padding: 0.2rem; gap: 0.15rem; border-radius: 8px; }
-        .toolbar-row { gap: 0.12rem; }
-        .tool-btn { width: 30px; height: 30px; font-size: 0.85rem; padding: 0; justify-content: center; min-width: 30px; }
-        .swatch { width: 18px; height: 18px; font-size: 0.65rem; }
-        .tool-label { display: none; }
-        .tool-shortcut { display: none; }
-        .actions-bar { gap: 0.15rem; padding-top: 0.15rem; }
-        .actions-bar .action-btn { font-size: 0.55rem; padding: 0.15rem 0.25rem; }
-        .brush-group label { display: none; }
-        .brush-group button { width: 20px; height: 20px; font-size: 0.7rem; }
-        .brush-count { font-size: 0.7rem; min-width: 16px; }
-        .separator { display: none; }
-        .actions-sep { display: none; }
-        .legend { font-size: 0.5rem; }
-      }
-      @media (max-width: 420px) {
-        body { padding: 0.15rem; gap: 0.1rem; }
-        .tool-btn { width: 26px; height: 26px; font-size: 0.75rem; min-width: 26px; }
-        .swatch { width: 15px; height: 15px; font-size: 0.55rem; }
-        h1 { font-size: 0.75rem; }
-      }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>PowderBox: a falling-sand physics sandbox</title>
+    <meta name="description" content="Pour, burn, freeze and blow up matter in a falling-sand physics sandbox that runs entirely in your browser." />
+    <meta name="theme-color" content="#1a0f1f" />
+    <meta property="og:title" content="PowderBox" />
+    <meta property="og:description" content="Pour, burn, freeze and blow up matter in a falling-sand physics sandbox that runs entirely in your browser." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://aieatassam.github.io/powder-box/" />
+    <meta property="og:image" content="https://aieatassam.github.io/powder-box/social.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chivo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="src/style.css" />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
   </head>
   <body>
-    <div class="layout">
-
-      <!-- ═══ Header ═══ -->
-      <header>
-        <div class="logo">
-          <span class="logo-icon">🧪</span>
-          <h1>PowderBox <small>particle sandbox</small></h1>
+    <div class="app">
+      <header class="head">
+        <div class="brand">
+          <span class="brand-name">PowderBox</span>
+          <span class="badge" id="state-badge" hidden>Paused</span>
         </div>
-        <div class="status">
-          <span class="status-badge brush-info" id="status-brush">Brush: <span id="status-size">3</span></span>
-          <span class="status-badge" id="status-tool">Sand</span>
+        <div class="scenes">
+          <button type="button" class="btn scene-picker" id="scene-picker" popovertarget="scene-menu">
+            <span class="scene-name" id="scene-name">Choose a scene</span>
+            <svg class="chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4 6 8 10 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
+          </button>
+          <div class="scene-menu" id="scene-menu" popover aria-label="Scenes">
+            <div class="scene-grid" id="scene-grid"></div>
+          </div>
+          <button type="button" class="btn" id="new-scene">New scene</button>
         </div>
+        <div class="head-actions">
+          <button type="button" class="btn btn--quiet" id="undo" disabled>Undo</button>
+          <button type="button" class="btn btn--quiet" id="save">Save</button>
+          <button type="button" class="btn btn--quiet" id="load">Load</button>
+          <button type="button" class="btn btn--quiet" id="record" aria-pressed="false">Record</button>
+          <button type="button" class="btn btn--quiet" id="help-open" aria-haspopup="dialog">Help</button>
+        </div>
+        <input type="file" id="file-input" accept=".pbox" hidden />
       </header>
 
-      <!-- ═══ Canvas ═══ -->
-      <div class="canvas-wrap">
-        <canvas id="sim-canvas"></canvas>
-        <div class="canvas-overlay"></div>
-        <div class="scene-toast" id="scene-name"></div>
-      </div>
+      <aside class="rail" id="palette" aria-label="Materials"></aside>
 
-      <!-- ═══ Toolbar ═══ -->
-      <div class="toolbar">
-        <div class="toolbar-row" id="tool-row">
-          <button class="tool-btn" id="tool-sand"><span class="swatch" style="background:#d4a574">🟤</span><span class="tool-label">Sand</span><span class="tool-shortcut">1</span></button>
-          <button class="tool-btn" id="tool-water"><span class="swatch" style="background:#3498db">💧</span><span class="tool-label">Water</span><span class="tool-shortcut">2</span></button>
-          <button class="tool-btn" id="tool-fire"><span class="swatch" style="background:#ff5722">🔥</span><span class="tool-label">Fire</span><span class="tool-shortcut">3</span></button>
-          <button class="tool-btn" id="tool-wall"><span class="swatch" style="background:#64646e">🧱</span><span class="tool-label">Wall</span><span class="tool-shortcut">4</span></button>
-          <button class="tool-btn" id="tool-wood"><span class="swatch" style="background:#8b4513">🪵</span><span class="tool-label">Wood</span><span class="tool-shortcut">5</span></button>
-          <button class="tool-btn" id="tool-oil"><span class="swatch" style="background:#50461e">🛢️</span><span class="tool-label">Oil</span><span class="tool-shortcut">6</span></button>
-          <button class="tool-btn" id="tool-plant"><span class="swatch" style="background:#2e7d32">🌿</span><span class="tool-label">Plant</span><span class="tool-shortcut">7</span></button>
-          <button class="tool-btn" id="tool-lava"><span class="swatch" style="background:#ff4500">🌋</span><span class="tool-label">Lava</span><span class="tool-shortcut">8</span></button>
-          <button class="tool-btn" id="tool-acid"><span class="swatch" style="background:#00ff00">🧪</span><span class="tool-label">Acid</span><span class="tool-shortcut">9</span></button>
-          <button class="tool-btn" id="tool-explode"><span class="swatch" style="background:#ff4444;box-shadow:inset 0 0 4px #ff8800">💥</span><span class="tool-label">Boom</span><span class="tool-shortcut">E</span></button>
-          <button class="tool-btn" id="tool-eraser"><span class="swatch eraser-swatch">✕</span><span class="tool-label">Erase</span><span class="tool-shortcut">0</span></button>
-
-          <div class="separator"></div>
-
-          <div class="brush-group">
-            <label>Brush</label>
-            <button id="brush-decrease">−</button>
-            <span class="brush-count" id="brush-size-display">3</span>
-            <button id="brush-increase">+</button>
+      <main class="play">
+        <div class="stage-wrap" id="stage-wrap">
+          <div class="stage" id="stage">
+            <canvas id="view" width="320" height="200" aria-label="Simulation canvas. Pointer or touch to paint matter."></canvas>
+            <div class="brush-ring" id="brush-ring" hidden></div>
+            <div class="scene-card" id="scene-card" role="status" aria-live="polite"></div>
           </div>
         </div>
 
-        <div class="actions-bar">
-          <button class="action-btn generate" id="btn-generate">🎲 Scene</button>
-          <button class="action-btn" id="btn-wind">🌬️ Off</button>
-          <button class="action-btn" id="btn-gravity">🔄 ↓</button>
-          <span class="actions-sep"></span>
-          <button class="action-btn" id="btn-save">💾 Save</button>
-          <button class="action-btn" id="btn-load">📂 Load</button>
-          <input type="file" id="load-input" accept=".pbox" style="display:none">
-          <button class="action-btn record" id="btn-record">🎬 GIF</button>
-          <button class="action-btn clear" id="btn-clear">✕ Clear</button>
+        <div class="transport" role="toolbar" aria-label="Simulation controls">
+          <div class="cluster">
+            <button type="button" class="btn btn--primary" id="play">Pause</button>
+            <button type="button" class="btn" id="step" disabled>Step</button>
+          </div>
+          <div class="cluster seg" role="group" aria-label="Speed">
+            <button type="button" class="btn" data-speed="1" aria-pressed="true">1x</button>
+            <button type="button" class="btn" data-speed="2" aria-pressed="false">2x</button>
+            <button type="button" class="btn" data-speed="4" aria-pressed="false">4x</button>
+          </div>
+          <div class="cluster">
+            <button type="button" class="btn" id="wind">Wind calm</button>
+            <button type="button" class="btn" id="gravity">Gravity down</button>
+          </div>
+          <div class="cluster brush" role="group" aria-label="Brush size">
+            <span class="brush-label">Brush</span>
+            <button type="button" class="btn btn--square" id="brush-smaller" aria-label="Smaller brush">&minus;</button>
+            <output id="brush-size" for="brush-smaller brush-larger">3</output>
+            <button type="button" class="btn btn--square" id="brush-larger" aria-label="Larger brush">+</button>
+          </div>
+          <div class="cluster">
+            <button type="button" class="btn" id="clear">Clear</button>
+          </div>
+          <div class="hud">
+            <span><strong id="particles">0</strong> particles</span>
+            <span><strong id="fps">0</strong> fps</span>
+          </div>
         </div>
-      </div>
 
-      <!-- ═══ Legend ═══ -->
-      <p class="legend">
-      <kbd>1</kbd>–<kbd>9</kbd> tools 
-      <kbd>0</kbd> eraser 
-      <kbd>−</kbd>/<kbd>=</kbd> brush 
-      <kbd>N</kbd> scene <kbd>←</kbd><kbd>→</kbd> cycle 
-      <kbd>E</kbd> explode <kbd>W</kbd> wind 
-      <kbd>G</kbd> GIF 
-      <kbd>C</kbd> clear 
-      <kbd>Space</kbd> pause 
-      Drag to draw
-    </p>
-
+        <p class="hint" id="hint" aria-live="polite"></p>
+      </main>
     </div>
-    <!-- ── end layout ── -->
 
-    <!-- ═══ Mode indicator (follows mouse) ═══ -->
-    <div id="mode-indicator" style="position:fixed;pointer-events:none;z-index:50;font-size:0.7rem;color:var(--text2);background:rgba(0,0,0,0.6);border:1px solid var(--border);border-radius:4px;padding:1px 4px;display:none;white-space:nowrap"></div>
-
-    <!-- ═══ Confirmation modal ═══ -->
-    <div class="confirm-overlay" id="confirm-overlay">
-      <div class="confirm-box">
-        <h3>🧹 Generate new scene?</h3>
-        <p>You've made changes to the canvas. Generating a new scene will replace everything. Undo is not supported.</p>
-        <div class="confirm-btns">
-          <button class="confirm-yes" id="confirm-yes">🎲 Generate</button>
-          <button class="confirm-no" id="confirm-no">Cancel</button>
-        </div>
+    <dialog id="help" aria-labelledby="help-title">
+      <div class="dialog-head">
+        <h2 id="help-title">Keyboard shortcuts</h2>
+        <button type="button" class="btn" id="help-close">Close</button>
       </div>
-    </div>
+      <h3 class="group-name">Simulation</h3>
+      <dl class="shortcuts">
+        <dt><kbd>Space</kbd></dt><dd>Pause or play</dd>
+        <dt><kbd>.</kbd></dt><dd>Step one tick while paused</dd>
+        <dt><kbd>w</kbd></dt><dd>Cycle wind</dd>
+        <dt><kbd>g</kbd></dt><dd>Flip gravity</dd>
+        <dt><kbd>c</kbd></dt><dd>Clear</dd>
+        <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>Smaller or larger brush (also the mouse wheel)</dd>
+        <dt><kbd>n</kbd></dt><dd>New random scene</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous or next scene</dd>
+        <dt><kbd>r</kbd></dt><dd>Start or stop recording</dd>
+      </dl>
+      <h3 class="group-name">Files</h3>
+      <dl class="shortcuts">
+        <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>z</kbd></dt><dd>Undo</dd>
+        <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>s</kbd></dt><dd>Save a .pbox file</dd>
+        <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>o</kbd></dt><dd>Load a .pbox file</dd>
+      </dl>
+      <h3 class="group-name">Materials</h3>
+      <dl class="shortcuts" id="tool-shortcuts"></dl>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" hidden></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
