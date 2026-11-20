@@ -2,3 +2,5 @@ node_modules/
 dist/
 test-screenshots/
 *.local
+.claude/
+.hallmark/

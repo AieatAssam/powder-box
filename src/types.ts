@@ -1,4 +1,7 @@
-// ─── Element types ───────────────────────────────────────────────
+// Shared contract between the simulation engine (src/sim.ts), the worker,
+// the scene generators and the UI. Element IDs are stable: they are stored
+// in save files.
+
 export const enum Element {
   EMPTY = 0,
   SAND = 1,
@@ -13,46 +16,114 @@ export const enum Element {
   SMOKE = 10,
   ACID = 11,
   GLASS = 12,
+  STONE = 13,
+  ICE = 14,
+  SNOW = 15,
+  GUNPOWDER = 16,
+  GAS = 17,
+  ASH = 18,
+  SEED = 19,
+  FIREWORK = 20,
+  SPARK = 21,
+  CLONE = 22,
+  VOID = 23,
+}
+export const ELEMENT_COUNT = 24;
+
+// ─── Material table ─────────────────────────────────────────────
+export const enum Kind { EMPTY = 0, POWDER = 1, LIQUID = 2, GAS = 3, SOLID = 4, ENERGY = 5 }
+
+export interface Material {
+  name: string;
+  kind: Kind;
+  /** Relative density. Heavier movable cells sink through lighter liquids/gases. */
+  density: number;
+  /** 0..1 chance per tick that an adjacent flame ignites it. 0 = fireproof. */
+  flammability: number;
+  /** Base colour variants [r,g,b]; the renderer picks one per cell and shades it. */
+  colors: number[][];
+  /** Emits light: the renderer adds a glow around it. */
+  glow?: boolean;
 }
 
-// All element IDs for iteration
-export const ALL_ELEMENTS: Element[] = [
-  Element.EMPTY, Element.SAND, Element.WATER, Element.FIRE,
-  Element.WALL, Element.WOOD, Element.OIL, Element.PLANT,
-  Element.LAVA, Element.STEAM, Element.SMOKE, Element.ACID,
-  Element.GLASS,
+export const MATERIALS: Material[] = [];
+function def(id: Element, m: Material) { MATERIALS[id] = m; }
+
+def(Element.EMPTY, { name: 'Empty', kind: Kind.EMPTY, density: 0, flammability: 0, colors: [[14, 15, 22]] });
+def(Element.SAND, { name: 'Sand', kind: Kind.POWDER, density: 60, flammability: 0, colors: [[212, 165, 116], [228, 180, 130], [195, 150, 105], [220, 172, 122], [205, 158, 110]] });
+def(Element.WATER, { name: 'Water', kind: Kind.LIQUID, density: 30, flammability: 0, colors: [[52, 152, 219], [41, 128, 185], [60, 165, 230], [48, 140, 200]] });
+def(Element.FIRE, { name: 'Fire', kind: Kind.ENERGY, density: 1, flammability: 0, colors: [[255, 87, 34], [255, 152, 0], [255, 193, 7], [255, 236, 150]], glow: true });
+def(Element.WALL, { name: 'Wall', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[100, 100, 110], [110, 110, 120], [90, 90, 100], [105, 105, 115]] });
+def(Element.WOOD, { name: 'Wood', kind: Kind.SOLID, density: 255, flammability: 0.04, colors: [[139, 69, 19], [160, 82, 45], [120, 60, 30], [145, 75, 35]] });
+def(Element.OIL, { name: 'Oil', kind: Kind.LIQUID, density: 20, flammability: 0.35, colors: [[80, 70, 30], [100, 85, 40], [90, 78, 35], [110, 92, 45]] });
+def(Element.PLANT, { name: 'Plant', kind: Kind.SOLID, density: 255, flammability: 0.15, colors: [[46, 125, 50], [76, 175, 80], [56, 142, 60], [36, 110, 42]] });
+def(Element.LAVA, { name: 'Lava', kind: Kind.LIQUID, density: 70, flammability: 0, colors: [[255, 69, 0], [255, 140, 0], [230, 60, 0], [255, 100, 0]], glow: true });
+def(Element.STEAM, { name: 'Steam', kind: Kind.GAS, density: 3, flammability: 0, colors: [[200, 210, 215], [180, 195, 205], [210, 220, 225]] });
+def(Element.SMOKE, { name: 'Smoke', kind: Kind.GAS, density: 4, flammability: 0, colors: [[80, 80, 84], [62, 62, 66], [98, 98, 102]] });
+def(Element.ACID, { name: 'Acid', kind: Kind.LIQUID, density: 35, flammability: 0, colors: [[140, 255, 60], [110, 235, 50], [160, 250, 80]], glow: true });
+def(Element.GLASS, { name: 'Glass', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[170, 205, 215], [150, 190, 205], [190, 220, 228]] });
+def(Element.STONE, { name: 'Stone', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[72, 68, 74], [84, 80, 86], [62, 58, 64], [78, 72, 76]] });
+def(Element.ICE, { name: 'Ice', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[168, 216, 240], [190, 228, 246], [150, 204, 234]] });
+def(Element.SNOW, { name: 'Snow', kind: Kind.POWDER, density: 10, flammability: 0, colors: [[240, 244, 250], [226, 232, 242], [250, 252, 255]] });
+def(Element.GUNPOWDER, { name: 'Gunpowder', kind: Kind.POWDER, density: 55, flammability: 1, colors: [[58, 56, 60], [72, 70, 74], [46, 44, 48]] });
+def(Element.GAS, { name: 'Gas', kind: Kind.GAS, density: 2, flammability: 0.9, colors: [[96, 78, 140], [110, 90, 156], [84, 68, 124]] });
+def(Element.ASH, { name: 'Ash', kind: Kind.POWDER, density: 25, flammability: 0, colors: [[150, 146, 142], [128, 124, 120], [168, 164, 160]] });
+def(Element.SEED, { name: 'Seed', kind: Kind.POWDER, density: 50, flammability: 0.1, colors: [[196, 214, 96], [176, 196, 80], [210, 226, 116]] });
+def(Element.FIREWORK, { name: 'Firework', kind: Kind.POWDER, density: 55, flammability: 1, colors: [[214, 60, 96], [232, 84, 118], [190, 44, 80]] });
+def(Element.SPARK, { name: 'Spark', kind: Kind.ENERGY, density: 1, flammability: 0, colors: [[255, 240, 180]], glow: true });
+def(Element.CLONE, { name: 'Clone', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[224, 176, 40], [240, 196, 60], [204, 156, 28]] });
+def(Element.VOID, { name: 'Void', kind: Kind.SOLID, density: 255, flammability: 0, colors: [[34, 8, 48], [46, 12, 64], [26, 4, 38]] });
+
+/** Typed-array lookups for hot loops (indexed by Element). */
+export const KIND = Uint8Array.from(MATERIALS, m => m.kind);
+export const DENSITY = Uint8Array.from(MATERIALS, m => m.density);
+
+// ─── Tools (the UI palette is built from this table) ────────────
+export type ToolGroup = 'Powders' | 'Liquids' | 'Solids' | 'Gases' | 'Energy' | 'Tools';
+export type ToolAction = 'paint' | 'explode' | 'lightning';
+
+export interface ToolDef {
+  id: string;
+  name: string;
+  /** Keyboard shortcut (single lowercase char). */
+  key: string;
+  group: ToolGroup;
+  action: ToolAction;
+  /** Element painted when action === 'paint' (EMPTY = eraser). */
+  element: Element;
+  /** One-line description of what makes it fun. */
+  hint: string;
+}
+
+const t = (id: string, name: string, key: string, group: ToolGroup, element: Element, hint: string, action: ToolAction = 'paint'): ToolDef =>
+  ({ id, name, key, group, action, element, hint });
+
+export const TOOLS: ToolDef[] = [
+  t('sand', 'Sand', '1', 'Powders', Element.SAND, 'Piles up. Fire fuses it into glass.'),
+  t('snow', 'Snow', 'o', 'Powders', Element.SNOW, 'Drifts on the wind, melts near heat.'),
+  t('gunpowder', 'Gunpowder', 'p', 'Powders', Element.GUNPOWDER, 'One spark and it all goes up.'),
+  t('ash', 'Ash', 'a', 'Powders', Element.ASH, 'What fire leaves behind. Fertile.'),
+  t('seed', 'Seed', 'd', 'Powders', Element.SEED, 'Sprouts a vine when it lands near water.'),
+  t('firework', 'Firework', 'f', 'Powders', Element.FIREWORK, 'Light it: it launches and bursts in colour.'),
+  t('water', 'Water', '2', 'Liquids', Element.WATER, 'Flows, freezes, boils, feeds plants.'),
+  t('oil', 'Oil', '6', 'Liquids', Element.OIL, 'Floats on water and burns fiercely.'),
+  t('lava', 'Lava', '8', 'Liquids', Element.LAVA, 'Ignites everything, cools into stone.'),
+  t('acid', 'Acid', '9', 'Liquids', Element.ACID, 'Eats through almost anything.'),
+  t('wall', 'Wall', '4', 'Solids', Element.WALL, 'Immovable. Only explosions break it.'),
+  t('wood', 'Wood', '5', 'Solids', Element.WOOD, 'Burns slowly down to ash.'),
+  t('plant', 'Plant', '7', 'Solids', Element.PLANT, 'Drinks water and grows.'),
+  t('stone', 'Stone', 'q', 'Solids', Element.STONE, 'Cooled lava. Melts again if it gets hot enough.'),
+  t('ice', 'Ice', 'i', 'Solids', Element.ICE, 'Freezes water it touches, melts near heat.'),
+  t('glass', 'Glass', 'l', 'Solids', Element.GLASS, 'Acid-proof container.'),
+  t('gas', 'Gas', 'm', 'Gases', Element.GAS, 'Invisible danger: rises, pools, explodes.'),
+  t('steam', 'Steam', 't', 'Gases', Element.STEAM, 'Rises, cools, rains back down.'),
+  t('fire', 'Fire', '3', 'Energy', Element.FIRE, 'Spreads to anything that burns.'),
+  t('explode', 'Bomb', 'e', 'Energy', Element.EMPTY, 'Click to detonate. Shockwave throws debris.', 'explode'),
+  t('lightning', 'Lightning', 'z', 'Energy', Element.EMPTY, 'Strikes down from the sky.', 'lightning'),
+  t('clone', 'Clone', 'k', 'Tools', Element.CLONE, 'Endlessly copies the first thing that touches it.'),
+  t('void', 'Void', 'v', 'Tools', Element.VOID, 'Swallows whatever touches it.'),
+  t('eraser', 'Eraser', '0', 'Tools', Element.EMPTY, 'Remove anything.'),
 ];
-
-// ─── Element categories (for physics rules) ─────────────────────
-/** Elements that fall with gravity (powders) */
-export const POWDERS = new Set([Element.SAND]);
-
-/** Elements that flow (liquids) */
-export const LIQUIDS = new Set([Element.WATER, Element.OIL, Element.ACID]);
-
-/** Elements that rise (gases) */
-export const GASES = new Set([Element.STEAM, Element.SMOKE]);
-
-/** Elements that are immovable */
-export const SOLIDS = new Set([Element.WALL, Element.WOOD, Element.PLANT, Element.GLASS]);
-
-/** Elements that can catch fire */
-export const FLAMMABLE = new Set([Element.WOOD, Element.OIL, Element.PLANT]);
-
-// ─── Tool identifiers ───────────────────────────────────────────
-export const enum Tool {
-  SAND = 1,
-  WATER = 2,
-  FIRE = 3,
-  WALL = 4,
-  WOOD = 5,
-  OIL = 6,
-  PLANT = 7,
-  LAVA = 8,
-  ACID = 9,
-  ERASER = 10,
-  EXPLOSIVE = 11,
-}
 
 export const BRUSH_SIZES = [1, 2, 3, 5, 8, 14] as const;
 export type BrushSize = (typeof BRUSH_SIZES)[number];
@@ -62,168 +133,50 @@ export const GRID_W = 320;
 export const GRID_H = 200;
 export const CELL_PX = 3; // Each grid cell rendered as CELL_PX × CELL_PX pixels
 
-// ─── Color palettes ─────────────────────────────────────────────
-// Each element gets multiple color variants for visual variety.
-// Format: [R, G, B][]
-const PALETTES: Record<number, number[][]> = {
-  [Element.SAND]: [
-    [212, 165, 116], [228, 180, 130], [195, 150, 105],
-    [220, 172, 122], [205, 158, 110],
-  ],
-  [Element.WATER]: [
-    [52, 152, 219], [41, 128, 185], [60, 165, 230],
-    [48, 140, 200], [55, 160, 215],
-  ],
-  [Element.FIRE]: [
-    [255, 87, 34], [255, 152, 0], [255, 193, 7],
-    [230, 74, 25], [255, 112, 67],
-  ],
-  [Element.WALL]: [
-    [100, 100, 110], [110, 110, 120], [90, 90, 100],
-    [105, 105, 115], [95, 95, 105],
-  ],
-  [Element.WOOD]: [
-    [139, 69, 19], [160, 82, 45], [120, 60, 30],
-    [145, 75, 35], [155, 90, 50],
-  ],
-  [Element.OIL]: [
-    [80, 70, 30], [100, 85, 40], [90, 78, 35],
-    [110, 92, 45], [75, 65, 28],
-  ],
-  [Element.PLANT]: [
-    [46, 125, 50], [76, 175, 80], [56, 142, 60],
-    [66, 160, 70], [36, 110, 42],
-  ],
-  [Element.LAVA]: [
-    [255, 69, 0], [255, 140, 0], [230, 60, 0],
-    [255, 100, 0], [200, 50, 0],
-  ],
-  [Element.STEAM]: [
-    [200, 210, 215], [180, 195, 205], [210, 220, 225],
-    [190, 200, 210], [220, 225, 230],
-  ],
-  [Element.SMOKE]: [
-    [80, 80, 80], [60, 60, 60], [100, 100, 100],
-    [70, 70, 70], [90, 90, 90],
-  ],
-  [Element.ACID]: [
-    [0, 255, 0], [50, 230, 50], [0, 245, 0],
-    [30, 220, 30], [0, 200, 0],
-  ],
-  [Element.GLASS]: [
-    [180, 200, 210], [170, 190, 200], [190, 210, 220],
-    [175, 195, 205], [185, 205, 215],
-  ],
-};
+/** Wind: -1 = left, 0 = calm, 1 = right, 2 = gusting (direction changes over time). */
+export type Wind = -1 | 0 | 1 | 2;
+/** Gravity: 1 = down, -1 = up. */
+export type Gravity = 1 | -1;
 
-/** Pre-computed flat RGB palette per element: each is a Uint8 of [R0,G0,B0, R1,G1,B1,...] */
-export const PALETTE_FLAT: Record<number, Uint8Array> = {};
-for (const [elem, colors] of Object.entries(PALETTES)) {
-  const flat = new Uint8Array(colors.length * 3);
-  for (let i = 0; i < colors.length; i++) {
-    flat[i * 3] = colors[i][0];
-    flat[i * 3 + 1] = colors[i][1];
-    flat[i * 3 + 2] = colors[i][2];
-  }
-  PALETTE_FLAT[Number(elem)] = flat;
-}
+// ─── Save format ────────────────────────────────────────────────
+// [magic u32 LE][width u16 LE][height u16 LE][grid w*h bytes][life w*h bytes]
+export const SAVE_MAGIC = 0x50424f58; // 'PBOX'
+export const SAVE_HEADER_BYTES = 8;
 
-/** Number of color variants per element */
-export const PALETTE_LEN: Record<number, number> = {};
-for (const [elem, colors] of Object.entries(PALETTES)) {
-  PALETTE_LEN[Number(elem)] = colors.length;
-}
-
-// ─── Worker message types ───────────────────────────────────────
-export interface InitMessage {
-  type: 'init';
-  width: number;
-  height: number;
-}
-
-export interface InputMessage {
-  type: 'input';
-  x: number;
-  y: number;
-  tool: Tool;
-  brushSize: number;
-  active: boolean;
-}
-
-export interface TickMessage {
-  type: 'tick';
-}
-
-export interface ClearMessage {
-  type: 'clear';
-}
-
-export interface PlaceCellsMessage {
-  type: 'placeCells';
-  /** Packed buffer: [x(16bit), y(16bit), elem(8bit), life(8bit)] × N (little-endian) */
-  data: ArrayBuffer;
-}
-
-export interface SaveStateMessage {
-  type: 'saveState';
-}
-
-export interface LoadStateMessage {
-  type: 'loadState';
-  /** Serialised grid: [W(16bit LE), H(16bit LE), grid[0..W*H-1](8bit), life[0..W*H-1](8bit)] */
-  data: ArrayBuffer;
-}
-
-export interface ExplodeMessage {
-  type: 'explode';
-  x: number;
-  y: number;
-  radius: number;
-}
-
-export interface WindMessage {
-  type: 'wind';
-  /** -1 = left, 0 = off, 1 = right */
-  direction: number;
-}
-
-export interface GravityMessage {
-  type: 'gravity';
-  /** 1 = normal down, -1 = reversed up */
-  direction: number;
-}
-
-export interface GenerateSceneMessage {
-  type: 'generateScene';
-  sceneIndex: number;
-  seed: number;
-  /** Incrementing token to pair the scene frame with the request */
-  genToken: number;
-}
-
+// ─── Main → worker messages ─────────────────────────────────────
 export type WorkerInput =
-  | InitMessage
-  | InputMessage
-  | TickMessage
-  | ClearMessage
-  | PlaceCellsMessage
-  | SaveStateMessage
-  | LoadStateMessage
-  | ExplodeMessage
-  | WindMessage
-  | GravityMessage
-  | GenerateSceneMessage;
+  | { type: 'init'; width: number; height: number }
+  /** Advance `steps` simulation ticks (0 = just re-render, used while paused) and reply with a frame. */
+  | { type: 'tick'; steps: number }
+  /** Paint a brush stroke from (x0,y0) to (x1,y1), interpolated so fast drags leave no gaps. */
+  | { type: 'paint'; x0: number; y0: number; x1: number; y1: number; element: Element; radius: number }
+  | { type: 'explode'; x: number; y: number; radius: number }
+  | { type: 'lightning'; x: number; y: number }
+  | { type: 'clear' }
+  | { type: 'wind'; direction: Wind }
+  | { type: 'gravity'; direction: Gravity }
+  /** Clears the grid, builds the scene, replies with a frame carrying `sceneGenToken`. */
+  | { type: 'generateScene'; sceneIndex: number; seed: number; genToken: number }
+  /** Replies with a `state` message containing a full save buffer (header included). */
+  | { type: 'saveState' }
+  /** `data` is a full save buffer (header included). Invalid buffers are ignored. */
+  | { type: 'loadState'; data: ArrayBuffer };
 
+// ─── Worker → main messages ─────────────────────────────────────
 export interface FrameMessage {
   type: 'frame';
-  /** RGBA pixel buffer (transferable) */
+  /** RGBA pixel buffer, GRID_W × GRID_H (transferred). */
   pixels: Uint8ClampedArray;
-  /** Token set on frames from generateScene, used to synchronize sceneCompletion flush */
+  /** Number of non-empty cells. */
+  particles: number;
+  /** Set only on the frame produced by `generateScene`. */
   sceneGenToken?: number;
 }
 
-export interface StateSnapshotMessage {
-  type: 'stateSnapshot';
-  /** Serialised: grid[0..W*H-1](8bit), life[0..W*H-1](8bit) */
+export interface StateMessage {
+  type: 'state';
+  /** Full save buffer (header included, transferred). */
   data: ArrayBuffer;
 }
+
+export type WorkerOutput = FrameMessage | StateMessage;
